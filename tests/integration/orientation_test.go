@@ -43,7 +43,7 @@ func TestOpeningOrientationObservesRealCluster(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		if scenario.Mode != "orientation" || len(scenario.Setup.Manifests) != 0 || len(scenario.Reset.Manifests) != 0 {
+		if scenario.Mode != "orientation" || scenario.Namespace != "" || len(scenario.Setup.Manifests) != 0 || len(scenario.Reset.Manifests) != 0 {
 			t.Fatalf("%s must be a resource-free orientation", id)
 		}
 	}

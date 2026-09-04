@@ -6,8 +6,9 @@ KubeCrypt welcomes scenario-pack and engine contributions.
 
 1. Install Go 1.27 or newer and Docker. `kind` and `kubectl` are installed by
    `kubecrypt setup` when you run the CLI. CI uses Go 1.27 for `gofmt` and tests.
-2. Run `go test ./...`.
-3. Run `go test -tags=integration ./tests/integration` for the disposable
+2. Run `make install` so `kubecrypt` is on your `PATH`.
+3. Run `go test ./...`.
+4. Run `go test -tags=integration ./tests/integration` for the disposable
    cluster suite.
 
 Keep scenario behavior declarative. Validators must judge resulting Kubernetes state
@@ -23,8 +24,10 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   deterministic reset data. Orientation scenarios may set `observeDelay`
   (for example `60s`) to pause automatic validation.
 - Add an explicit scenario ID and path to `curriculum/catalog.yaml`.
-- Mirror published curriculum under `internal/curriculum/bundled/`; tests reject
-  drift between canonical and embedded assets.
+- Sync the embedded copy with `make bundle-lesson 01-foundations/01-pod-creation`.
+  That checks the catalog `path:` entry and copies both the scenario and
+  `catalog.yaml`. Tests reject drift between `curriculum/` and
+  `internal/curriculum/bundled/`.
 - Do not include host shell commands, privileged workloads, host namespaces,
   or `hostPath` volumes.
 - Run `kubecrypt pack validate curriculum`.

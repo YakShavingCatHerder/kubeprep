@@ -94,7 +94,11 @@ func Validate(scenario *Scenario) error {
 		}
 		seenTracks[track] = struct{}{}
 	}
-	if err := validateManifestRefs("setup.manifests", scenario.Setup.Manifests, scenario.Mode != "orientation"); err != nil {
+	if err := validateNamespaceName(scenario.Namespace); err != nil {
+		return err
+	}
+	requireManifests := scenario.Mode != "orientation" && strings.TrimSpace(scenario.Namespace) == ""
+	if err := validateManifestRefs("setup.manifests", scenario.Setup.Manifests, requireManifests); err != nil {
 		return err
 	}
 	if len(scenario.Checks) == 0 {
@@ -146,8 +150,19 @@ func Validate(scenario *Scenario) error {
 	if strings.TrimSpace(scenario.Debrief.Explanation) == "" {
 		return fmt.Errorf("debrief.explanation: must not be empty")
 	}
-	if err := validateManifestRefs("reset.manifests", scenario.Reset.Manifests, scenario.Mode != "orientation"); err != nil {
+	if err := validateManifestRefs("reset.manifests", scenario.Reset.Manifests, requireManifests); err != nil {
 		return err
+	}
+	return nil
+}
+
+func validateNamespaceName(name string) error {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return nil
+	}
+	if !strings.HasPrefix(name, "kubecrypt-") || !idPattern.MatchString(name) {
+		return fmt.Errorf("namespace: %q must be a kubecrypt-* name", name)
 	}
 	return nil
 }

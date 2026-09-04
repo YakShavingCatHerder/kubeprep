@@ -73,8 +73,15 @@ kubecrypt --pack ./my-pack resume
 **Publish into core** when the module should ship in the next official
 release. Canonical files live under `curriculum/<slot>/`. The binary embeds a
 copy from `internal/curriculum/bundled/`, and tests require those two trees to
-match byte-for-byte. After you edit `curriculum/`, copy the same files
-(including `catalog.yaml`) into the bundled tree.
+match byte-for-byte. After you edit `curriculum/`, register the lab in
+`curriculum/catalog.yaml` and sync the embedded copy:
+
+```sh
+make bundle-lesson 01-foundations/01-pod-creation
+```
+
+That command fails if the catalog has no matching `path:` entry. When the
+catalog lists the lab, it copies both the scenario file and `catalog.yaml`.
 
 | | Local pack | Published in core |
 | --- | --- | --- |
@@ -90,14 +97,16 @@ Do not add this `contribute/` directory to a catalog.
 
 Module `id` is the slot without the number (`01-foundations` → `foundations`).
 Each scenario `id` and `path` must match the file, and `module:` inside the
-scenario must match the catalog module id.
+scenario must match the catalog module id. Lab files are numbered inside the
+slot so play order is visible: `01-foundations/01-pod-creation.yaml` is always
+the first foundations lab. Catalog list order must match those numbers.
 
 ```yaml
   - id: foundations
     title: Foundations
     scenarios:
       - id: inspect-namespace
-        path: 01-foundations/inspect-namespace.yaml
+        path: 01-foundations/01-inspect-namespace.yaml
 ```
 
 Use the same shape in a local pack’s `catalog.yaml`, with paths relative to
@@ -110,7 +119,9 @@ that pack.
 - Scale, edit, patch, apply, or recreate all pass if the state is right.
 - Exactly three hints: conceptual, then what to inspect, then a concrete next step.
 - The debrief explains the real Kubernetes mechanism.
-- Setup and reset are Kubernetes manifests only.
+- Declare `namespace: kubecrypt-<id>` on the scenario when the lab needs a
+  workspace Namespace. The runner creates it on start and recreates it on reset.
+  Extra broken objects still belong in setup/reset manifest files.
 
 Checks the runner can evaluate today: `objectExists`, `fieldEquals`,
 `deploymentAvailable`, `podReady`, `containersHealthy`, `nodeTopology`.

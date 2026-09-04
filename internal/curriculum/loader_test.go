@@ -18,7 +18,7 @@ func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if strings.Join(ids, ",") != "shell-orientation,cluster-components" {
+	if strings.Join(ids, ",") != "shell-orientation,cluster-components,pod-creation" {
 		t.Fatalf("scenario order = %v", ids)
 	}
 	scenario, err := registry.LoadScenario("cluster-components")
@@ -31,13 +31,47 @@ func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
 }
 
 func TestLoadFileCanonicalScenario(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "00-orientation", "cluster-components.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "00-orientation", "02-cluster-components.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if scenario.ID != "cluster-components" || scenario.Module != "orientation" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
+	}
+}
+
+func TestLoadFilePodCreation(t *testing.T) {
+	filename := filepath.Join("..", "..", "curriculum", "01-foundations", "01-pod-creation.yaml")
+	scenario, err := LoadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scenario.ID != "pod-creation" || scenario.Module != "foundations" {
+		t.Fatalf("unexpected scenario: %#v", scenario)
+	}
+	if scenario.Mode != "challenge" {
+		t.Fatalf("mode = %q, want challenge", scenario.Mode)
+	}
+	if scenario.Namespace != "kubecrypt-foundations" {
+		t.Fatalf("namespace = %q", scenario.Namespace)
+	}
+	if len(scenario.Setup.Manifests) != 0 {
+		t.Fatalf("setup manifests = %#v", scenario.Setup.Manifests)
+	}
+	if len(scenario.Reset.Manifests) != 0 {
+		t.Fatalf("reset manifests = %#v", scenario.Reset.Manifests)
+	}
+	if len(scenario.Checks) != 2 {
+		t.Fatalf("checks = %d, want 2", len(scenario.Checks))
+	}
+	exists := scenario.Checks[0]
+	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubecrypt-foundations" || exists.Name != "nginx" {
+		t.Fatalf("objectExists check = %#v", exists)
+	}
+	image := scenario.Checks[1]
+	if image.Type != CheckFieldEquals || image.Field != "spec.containers[0].image" || image.Value != "nginx:1.27" {
+		t.Fatalf("fieldEquals check = %#v", image)
 	}
 }
 
@@ -77,8 +111,9 @@ func TestBundledOrientationScenariosPauseBeforeValidation(t *testing.T) {
 func TestBundledAssetsMatchCanonicalCurriculum(t *testing.T) {
 	files := []string{
 		"catalog.yaml",
-		"00-orientation/shell-orientation.yaml",
-		"00-orientation/cluster-components.yaml",
+		"00-orientation/01-shell-orientation.yaml",
+		"00-orientation/02-cluster-components.yaml",
+		"01-foundations/01-pod-creation.yaml",
 	}
 	for _, name := range files {
 		canonical, err := os.ReadFile(filepath.Join("..", "..", "curriculum", filepath.FromSlash(name)))
@@ -151,7 +186,11 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, file := range packFS(scenarioData) {
-		if err := os.WriteFile(filepath.Join(packDir, name), file.Data, 0o600); err != nil {
+		dest := filepath.Join(packDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dest, file.Data, 0o600); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -160,7 +199,7 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if got := strings.Join(ids, ","); got != "shell-orientation,cluster-components,test-scenario" {
+	if got := strings.Join(ids, ","); got != "shell-orientation,cluster-components,pod-creation,test-scenario" {
 		t.Fatalf("scenario order = %s", got)
 	}
 }
@@ -194,7 +233,11 @@ func TestValidatePackRejectsEscapingSymlink(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("not a scenario"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.Symlink(outside, filepath.Join(packDir, "scenario.yaml")); err != nil {
+	scenarioPath := filepath.Join(packDir, "02-workloads", "01-test-scenario.yaml")
+	if err := os.MkdirAll(filepath.Dir(scenarioPath), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Symlink(outside, scenarioPath); err != nil {
 		t.Skipf("symlinks unavailable: %v", err)
 	}
 	catalogData, err := yaml.Marshal(validCatalog())
@@ -223,6 +266,8 @@ func TestValidateScenario(t *testing.T) {
 		{"unsafe manifest reference", func(s *Scenario) { s.Setup.Manifests[0] = "../workload.yaml" }, "clean relative path"},
 		{"unknown typed check", func(s *Scenario) { s.Checks[0].Type = "runCommand" }, "unsupported check"},
 		{"inverted Kubernetes range", func(s *Scenario) { s.Kubernetes.Min = "1.36" }, "newer than"},
+		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubecrypt-*"},
+		{"challenge without start state", func(s *Scenario) { s.Setup.Manifests = nil; s.Reset.Manifests = nil }, "must contain at least one manifest"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -233,6 +278,16 @@ func TestValidateScenario(t *testing.T) {
 				t.Fatalf("Validate() error = %v, want %q", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestValidateAllowsChallengeNamespaceWithoutManifests(t *testing.T) {
+	scenario := validScenario()
+	scenario.Setup.Manifests = nil
+	scenario.Reset.Manifests = nil
+	scenario.Namespace = "kubecrypt-foundations"
+	if err := Validate(scenario); err != nil {
+		t.Fatalf("Validate(): %v", err)
 	}
 }
 
@@ -270,16 +325,29 @@ func validCatalog() Catalog {
 		Revision:   "2026-09",
 		Modules: []Module{{
 			ID: "workloads", Title: "Workloads",
-			Scenarios: []ScenarioRef{{ID: "test-scenario", Path: "scenario.yaml"}},
+			Scenarios: []ScenarioRef{{ID: "test-scenario", Path: "02-workloads/01-test-scenario.yaml"}},
 		}},
 	}
 }
 
 func packFS(scenarioData []byte) fstest.MapFS {
 	catalogData, _ := yaml.Marshal(validCatalog())
-	files := scenarioFS(scenarioData)
-	files["catalog.yaml"] = &fstest.MapFile{Data: catalogData}
-	return files
+	return fstest.MapFS{
+		"catalog.yaml":                       {Data: catalogData},
+		"02-workloads/01-test-scenario.yaml": {Data: scenarioData},
+		"02-workloads/workload.yaml": {Data: []byte(`
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: kubecrypt-test
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: test
+  namespace: kubecrypt-test
+`)},
+	}
 }
 
 func scenarioFS(scenarioData []byte) fstest.MapFS {

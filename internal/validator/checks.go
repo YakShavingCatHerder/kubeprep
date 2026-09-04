@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -202,16 +203,59 @@ func (c FieldEquals) Evaluate(ctx context.Context, runner Runner) (Result, error
 func nestedField(object map[string]any, path []string) (any, bool) {
 	var current any = object
 	for _, segment := range path {
+		name, indexes, ok := parsePathSegment(segment)
+		if !ok {
+			return nil, false
+		}
 		fields, ok := current.(map[string]any)
 		if !ok {
 			return nil, false
 		}
-		current, ok = fields[segment]
+		current, ok = fields[name]
 		if !ok {
 			return nil, false
 		}
+		for _, index := range indexes {
+			list, ok := current.([]any)
+			if !ok || index >= len(list) {
+				return nil, false
+			}
+			current = list[index]
+		}
 	}
 	return current, true
+}
+
+func parsePathSegment(segment string) (string, []int, bool) {
+	start := strings.IndexByte(segment, '[')
+	if start == -1 {
+		if segment == "" || strings.ContainsAny(segment, "]") {
+			return "", nil, false
+		}
+		return segment, nil, true
+	}
+	name := segment[:start]
+	if name == "" {
+		return "", nil, false
+	}
+	rest := segment[start:]
+	var indexes []int
+	for len(rest) > 0 {
+		if rest[0] != '[' {
+			return "", nil, false
+		}
+		close := strings.IndexByte(rest, ']')
+		if close < 2 {
+			return "", nil, false
+		}
+		index, err := strconv.Atoi(rest[1:close])
+		if err != nil || index < 0 {
+			return "", nil, false
+		}
+		indexes = append(indexes, index)
+		rest = rest[close+1:]
+	}
+	return name, indexes, true
 }
 
 // DeploymentExists checks for a named Deployment.
