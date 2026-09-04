@@ -1,0 +1,107 @@
+apiVersion: kubecrypt.io/v1alpha1
+id: cluster-components
+mode: orientation
+observeDelay: 60s
+title: Cluster Components
+description: Inspect a Kubernetes cluster and identify its control-plane and node components.
+revision: 2026-09
+module: orientation
+difficulty: 1
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+requires:
+  - multi-node
+tracks:
+  - beginner
+  - cka
+  - ckad
+objective: |
+  Use the Lab Shell to run:
+
+  kubectl get nodes
+  kubectl get namespaces
+  kubectl get pods -n kube-system
+  kubectl get pods -n kube-system -o wide
+
+  Identify the control-plane node, worker nodes, API server, etcd, scheduler,
+  controller manager, CoreDNS, kube-proxy, and CNI components.
+concepts:
+  - cluster
+  - nodes
+  - namespaces
+  - control-plane
+  - kube-system
+  - coredns
+  - kube-proxy
+  - cni
+setup:
+  manifests: []
+checks:
+  - type: nodeTopology
+    count: 3
+    controlPlanes: 1
+    workers: 2
+  - type: objectExists
+    kind: namespace
+    name: kube-system
+  - type: podReady
+    namespace: kube-system
+    selector: component=kube-apiserver
+    count: 1
+  - type: podReady
+    namespace: kube-system
+    selector: component=etcd
+    count: 1
+  - type: podReady
+    namespace: kube-system
+    selector: component=kube-scheduler
+    count: 1
+  - type: podReady
+    namespace: kube-system
+    selector: component=kube-controller-manager
+    count: 1
+  - type: podReady
+    namespace: kube-system
+    selector: k8s-app=kube-dns
+    count: 2
+  - type: podReady
+    namespace: kube-system
+    selector: k8s-app=kube-proxy
+    count: 3
+  - type: podReady
+    namespace: kube-system
+    selector: app=kindnet
+    count: 3
+hints:
+  - Start with kubectl get nodes and compare the ROLES column.
+  - System components run in the kube-system namespace.
+  - Add -o wide to the Pod listing to see where each component runs.
+completion: |
+  The expected nodes, namespace, control-plane Pods, DNS, service proxy, and CNI
+  agents are present and Ready.
+debrief:
+  explanation: |
+    The API server is the central interface to Kubernetes state. etcd stores
+    persistent cluster state. The scheduler assigns unscheduled Pods to Nodes.
+    The controller manager runs reconciliation controllers. CoreDNS provides
+    cluster DNS, kube-proxy implements Service networking in this profile, and
+    kindnet provides CNI networking. kubelet runs as a service on each Node, so
+    it does not appear in the kube-system Pod list.
+  commands:
+    - kubectl get nodes
+    - kubectl get namespaces
+    - kubectl get pods -n kube-system
+    - kubectl get pods -n kube-system -o wide
+  concepts:
+    - API server
+    - etcd
+    - scheduler
+    - controller manager
+    - CoreDNS
+    - kube-proxy
+    - CNI
+    - kubelet
+  domain: Cluster Architecture, Installation and Configuration
+reset:
+  manifests: []

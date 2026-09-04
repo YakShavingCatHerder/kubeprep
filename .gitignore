@@ -1,0 +1,50 @@
+# Compiled binaries and release output
+/kubecrypt
+/bin/
+/build/
+/dist/
+*.exe
+*.test
+*.out
+
+# Go workspace and vendored dependencies
+go.work
+go.work.sum
+/vendor/
+
+# Test, coverage, and profiling output
+/coverage/
+/coverage.out
+*.coverprofile
+*.prof
+*.pprof
+
+# Local KubeCrypt runtime state
+/.kubecrypt/
+/tmp/
+/.cache/
+*.kubeconfig
+cluster-ownership.json
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.local
+
+# Logs and temporary editor files
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+
+# IDE-specific local settings
+/.cursor/
+/.idea/
+/.vscode/
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db

@@ -1,0 +1,45 @@
+# Fill this, then author curriculum/<slot>/ (or a local pack) from it.
+# Slot infers: module id, catalog order, domain, prior skills, tracks,
+# k8s 1.35, kind, namespace kubecrypt-<id>, challenge mode, shrinking guidance.
+# Grade cluster state, never commands. Reset reapplies brokenStart.
+
+slot: 01-foundations # 00-orientation … 07-troubleshooting
+
+# What is this module for?
+teach: ""        # operational skill the learner should leave with
+wrongIdea: ""    # misconception to correct
+mentalModel: ""  # how Kubernetes actually behaves (for the debrief)
+revisitLater: "" # later lab that re-tests this without naming the concept
+
+# One block per scenario, catalog order. Copy the block to add a lab.
+# First lab is more guided; last is less. Hints: conceptual → procedural → explicit.
+labs:
+  - id: ""
+    title: ""
+    guidance: ""       # guided | assisted | operator (blank = infer from order)
+    why: ""            # why this lab sits here in the sequence
+    object: ""         # kind/name (namespace defaults to kubecrypt-<id>)
+    brokenStart: ""    # the incomplete/broken cluster state we apply
+    doneWhen: ""       # observable target state
+    checks:            # runner today: objectExists, fieldEquals, deploymentAvailable, podReady, containersHealthy, nodeTopology
+      - type: ""
+        name: ""
+    accept:            # legitimate workflows that must all pass
+      - ""             # e.g. scale, edit, patch, apply
+    reject:            # shortcuts that must still fail
+      - ""             # e.g. fixing a different namespace; creating Pods by hand
+    hints:
+      - ""             # 1 conceptual: what kind of fact matters
+      - ""             # 2 procedural: what to inspect
+      - ""             # 3 explicit: a concrete command or next step
+    debrief: ""        # real mechanism, object names, no pep talk
+    remember:          # shown after success; never required to succeed
+      - ""
+    difficulty: 1      # 1–5
+    proveAlternate: "" # second valid fix the encounter test should accept
+
+# Leave empty unless slot defaults are wrong.
+overrides:
+  tracks: []           # beginner, cka, ckad
+  namespace: ""
+  extraCapability: ""  # e.g. network-policy, dynamic-storage

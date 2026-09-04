@@ -1,0 +1,12 @@
+apiVersion: kubecrypt.io/catalog/v1alpha1
+name: core
+title: KubeCrypt Core Scenarios
+revision: 2026-09
+modules:
+  - id: orientation
+    title: Orientation
+    scenarios:
+      - id: shell-orientation
+        path: 00-orientation/shell-orientation.yaml
+      - id: cluster-components
+        path: 00-orientation/cluster-components.yaml

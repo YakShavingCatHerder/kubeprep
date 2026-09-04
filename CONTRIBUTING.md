@@ -1,0 +1,35 @@
+# Contributing to KubeCrypt
+
+KubeCrypt welcomes scenario-pack and engine contributions.
+
+## Development
+
+1. Install Go 1.24 or newer, Docker, `kind`, and `kubectl`.
+2. Run `go test ./...`.
+3. Run `go test -tags=integration ./tests/integration` for the disposable
+   cluster suite.
+
+Keep scenario behavior declarative. Validators must judge resulting Kubernetes state
+rather than command history. The runner presents scenarios in a permanent split
+with a real Lab Shell; do not assume the TUI suspends into a shell.
+
+## Scenario submissions
+
+- Start a new module from [`contribute/`](contribute/). For a single extra
+  lab, start from the closest scenario under `curriculum/`.
+- Include metadata, an objective, setup, typed checks, progressive hints,
+  completion text, a technical debrief, capability requirements, and
+  deterministic reset data. Orientation scenarios may set `observeDelay`
+  (for example `60s`) to pause automatic validation.
+- Add an explicit scenario ID and path to `curriculum/catalog.yaml`.
+- Mirror published curriculum under `internal/curriculum/bundled/`; tests reject
+  drift between canonical and embedded assets.
+- Do not include host shell commands, privileged workloads, host namespaces,
+  or `hostPath` volumes.
+- Run `kubecrypt pack validate curriculum`.
+- Add a scenario test proving the initial state, target state, and
+  reset behavior.
+
+Local packs can be loaded with `kubecrypt --pack <directory> resume`. Scenario
+IDs must be unique across all active packs. All contributions are reviewed
+before they become bundled trusted curriculum.
