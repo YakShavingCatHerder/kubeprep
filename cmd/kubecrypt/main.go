@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/elongmusty/kubecrypt/internal/cli"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/cli"
 )
 
 func main() {

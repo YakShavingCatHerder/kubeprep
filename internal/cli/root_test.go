@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/elongmusty/kubecrypt/internal/curriculum"
-	"github.com/elongmusty/kubecrypt/internal/game"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/game"
 	"github.com/spf13/cobra"
 )
 
@@ -42,6 +42,23 @@ func TestRootUsesNeutralCommands(t *testing.T) {
 		if names[removed] {
 			t.Errorf("themed command %q is still registered", removed)
 		}
+	}
+}
+
+func TestRootReportsVersion(t *testing.T) {
+	previous := Version
+	Version = "test-0.1.0"
+	t.Cleanup(func() { Version = previous })
+
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"--version"})
+	if err := root.ExecuteContext(context.Background()); err != nil {
+		t.Fatalf("--version: %v", err)
+	}
+	if got := strings.TrimSpace(output.String()); got != "kubecrypt test-0.1.0" {
+		t.Fatalf("--version = %q", got)
 	}
 }
 

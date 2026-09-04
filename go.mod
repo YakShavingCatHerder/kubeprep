@@ -1,4 +1,4 @@
-module github.com/elongmusty/kubecrypt
+module github.com/YakShavingCatHerder/kubecrypt
 
 go 1.24.2
 

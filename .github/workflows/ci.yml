@@ -19,6 +19,11 @@ jobs:
       - run: test -z "$(gofmt -l .)"
       - run: go vet ./...
       - run: go test -race ./...
+      - uses: goreleaser/goreleaser-action@v6
+        with:
+          distribution: goreleaser
+          version: "~> v2"
+          args: check
 
   kind-integration:
     runs-on: ubuntu-latest

@@ -12,13 +12,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/elongmusty/kubecrypt/internal/cluster"
-	"github.com/elongmusty/kubecrypt/internal/curriculum"
-	"github.com/elongmusty/kubecrypt/internal/game"
-	"github.com/elongmusty/kubecrypt/internal/terminal"
-	"github.com/elongmusty/kubecrypt/internal/validator"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/cluster"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/game"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/terminal"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/validator"
 	"github.com/spf13/cobra"
 )
+
+// Version is the reported CLI version. Release builds override it with ldflags.
+var Version = "dev"
 
 type app struct {
 	in       io.Reader
@@ -44,9 +47,11 @@ func (a *app) rootCommand() *cobra.Command {
 	root := &cobra.Command{
 		Use:           "kubecrypt",
 		Short:         "Run Kubernetes certification training scenarios",
+		Version:       Version,
 		SilenceUsage:  true,
 		SilenceErrors: true,
 	}
+	root.SetVersionTemplate("{{printf \"kubecrypt %s\\n\" .Version}}")
 	root.SetIn(a.in)
 	root.SetOut(a.out)
 	root.SetErr(a.err)

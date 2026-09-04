@@ -1,7 +1,10 @@
-.PHONY: build test test-integration lint
+.PHONY: build snapshot test test-integration lint
 
 build:
-	go build -o bin/kubecrypt ./cmd/kubecrypt
+	go build -ldflags="-X github.com/YakShavingCatHerder/kubecrypt/internal/cli.Version=dev" -o bin/kubecrypt ./cmd/kubecrypt
+
+snapshot:
+	goreleaser build --snapshot --clean
 
 test:
 	go test ./...
