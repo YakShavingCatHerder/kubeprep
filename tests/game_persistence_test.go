@@ -10,7 +10,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elongmusty/kubecrypt/internal/game"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/game"
 )
 
 func TestExperienceModes(t *testing.T) {

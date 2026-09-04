@@ -17,14 +17,33 @@ recompiling KubeCrypt.
 
 ## Requirements
 
-- macOS or Linux
+- macOS or Linux (amd64 or arm64)
 - Docker (or a Docker-compatible runtime usable by `kind`)
 - `kind`
 - `kubectl`
 
 Run `kubecrypt doctor` for actionable prerequisite checks.
 
+## Install
+
+Tagged releases publish `kubecrypt` binaries for Linux and macOS (amd64 and
+arm64) from [YakShavingCatHerder/kubecrypt](https://github.com/YakShavingCatHerder/kubecrypt).
+Download the archive for your platform from GitHub Releases, unpack it, and
+put `kubecrypt` on your `PATH`.
+
+```sh
+# Example: macOS Apple Silicon, after downloading the release archive
+tar -xzf kubecrypt_*_Darwin_arm64.tar.gz
+sudo mv kubecrypt /usr/local/bin/
+kubecrypt --version
+```
+
+You still install Docker, `kind`, and `kubectl` yourself. `kind` and `kubectl`
+will be managed by KubeCrypt in a later change.
+
 ## Build and set up
+
+From source (Go 1.24 or newer):
 
 ```sh
 go build -o kubecrypt ./cmd/kubecrypt

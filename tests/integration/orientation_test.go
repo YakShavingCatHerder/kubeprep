@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/elongmusty/kubecrypt/internal/cluster"
-	"github.com/elongmusty/kubecrypt/internal/curriculum"
-	"github.com/elongmusty/kubecrypt/internal/validator"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/cluster"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubecrypt/internal/validator"
 )
 
 func TestOpeningOrientationObservesRealCluster(t *testing.T) {
