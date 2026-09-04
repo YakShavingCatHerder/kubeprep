@@ -88,6 +88,16 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	if scenario.ID != "cluster-components" {
 		t.Fatalf("second scenario = %q", scenario.ID)
 	}
+	if err := store.CompleteScenario(scenario.ID); err != nil {
+		t.Fatal(err)
+	}
+	scenario, err = currentScenario(store, registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scenario.ID != "pod-creation" {
+		t.Fatalf("third scenario = %q", scenario.ID)
+	}
 	if err := store.SelectScenario("shell-orientation"); err != nil {
 		t.Fatal(err)
 	}
@@ -117,6 +127,16 @@ func TestFollowingIncompleteScenario(t *testing.T) {
 		t.Fatalf("following scenario = %v", next)
 	}
 	if err := store.CompleteScenario("cluster-components"); err != nil {
+		t.Fatal(err)
+	}
+	next, err = followingIncompleteScenario(store, registry, "shell-orientation")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next == nil || next.ID != "pod-creation" {
+		t.Fatalf("following scenario after cluster-components = %v", next)
+	}
+	if err := store.CompleteScenario("pod-creation"); err != nil {
 		t.Fatal(err)
 	}
 	next, err = followingIncompleteScenario(store, registry, "shell-orientation")

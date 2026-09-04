@@ -48,10 +48,15 @@ installs pinned `kind` and `kubectl` into the KubeCrypt config directory.
 From source (Go 1.27 or newer; matches CI `gofmt`):
 
 ```sh
-go build -o kubecrypt ./cmd/kubecrypt
-./kubecrypt doctor
-./kubecrypt setup
+make install
+kubecrypt doctor
+kubecrypt setup
 ```
+
+`make build` writes `./bin/kubecrypt`. `make install` copies that binary into
+`$(go env GOPATH)/bin` (or `GOBIN`) so you can run `kubecrypt` without a path
+prefix. If that directory is not already on your `PATH`, the install target
+prints the `export PATH=...` line to add.
 
 `setup` creates an isolated three-node `kubecrypt` cluster and opens the first
 incomplete scenario in the active catalogs. On first setup it

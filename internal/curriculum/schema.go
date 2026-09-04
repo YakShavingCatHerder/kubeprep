@@ -20,6 +20,7 @@ type Scenario struct {
 	Tracks       []string                `yaml:"tracks"`
 	Objective    string                  `yaml:"objective"`
 	Concepts     []string                `yaml:"concepts"`
+	Namespace    string                  `yaml:"namespace,omitempty"`
 	Setup        ResourceSet             `yaml:"setup"`
 	Checks       []Check                 `yaml:"checks"`
 	Hints        []string                `yaml:"hints"`

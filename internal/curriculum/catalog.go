@@ -4,10 +4,23 @@ import (
 	"fmt"
 	"io/fs"
 	"path"
+	"regexp"
+	"strconv"
 	"strings"
 )
 
 const CatalogAPIVersionV1Alpha1 = "kubecrypt.io/catalog/v1alpha1"
+
+// numberedScenarioPath is {slotNN}-{module}/{labNN}-{id}.yaml.
+// Lab numbers are the play order inside that module: 01 is the first lab.
+var numberedScenarioPath = regexp.MustCompile(`^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)/(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.(yaml|yml)$`)
+
+type numberedPath struct {
+	Slot     int
+	ModuleID string
+	Index    int
+	ID       string
+}
 
 // Catalog defines one scenario pack and its authored module order.
 type Catalog struct {
@@ -67,6 +80,7 @@ func validateCatalog(catalog *Catalog) error {
 	}
 	seenModules := make(map[string]struct{})
 	seenScenarios := make(map[string]struct{})
+	previousSlot := -1
 	for moduleIndex, module := range catalog.Modules {
 		if !idPattern.MatchString(module.ID) {
 			return fmt.Errorf("modules[%d].id: %q must be lowercase kebab-case", moduleIndex, module.ID)
@@ -81,6 +95,7 @@ func validateCatalog(catalog *Catalog) error {
 		if len(module.Scenarios) == 0 {
 			return fmt.Errorf("modules[%d].scenarios: must contain at least one scenario", moduleIndex)
 		}
+		moduleSlot := -1
 		for scenarioIndex, ref := range module.Scenarios {
 			if !idPattern.MatchString(ref.ID) {
 				return fmt.Errorf("modules[%d].scenarios[%d].id: %q must be lowercase kebab-case", moduleIndex, scenarioIndex, ref.ID)
@@ -95,8 +110,60 @@ func validateCatalog(catalog *Catalog) error {
 			if ext != ".yaml" && ext != ".yml" {
 				return fmt.Errorf("modules[%d].scenarios[%d].path: %q must reference YAML", moduleIndex, scenarioIndex, ref.Path)
 			}
+			parsed, parseErr := parseNumberedScenarioPath(ref.Path)
+			if parseErr != nil {
+				return fmt.Errorf("modules[%d].scenarios[%d].path: %w", moduleIndex, scenarioIndex, parseErr)
+			}
+			if parsed.ModuleID != module.ID {
+				return fmt.Errorf("modules[%d].scenarios[%d].path: directory module %q does not match catalog module %q",
+					moduleIndex, scenarioIndex, parsed.ModuleID, module.ID)
+			}
+			if parsed.ID != ref.ID {
+				return fmt.Errorf("modules[%d].scenarios[%d].path: file id %q does not match catalog id %q",
+					moduleIndex, scenarioIndex, parsed.ID, ref.ID)
+			}
+			if parsed.Index != scenarioIndex+1 {
+				return fmt.Errorf("modules[%d].scenarios[%d].path: lab number %02d must be %02d, the %s lab in module %q",
+					moduleIndex, scenarioIndex, parsed.Index, scenarioIndex+1, ordinal(scenarioIndex+1), module.ID)
+			}
+			if scenarioIndex == 0 {
+				if parsed.Slot <= previousSlot {
+					return fmt.Errorf("modules[%d]: slot %02d must come after slot %02d", moduleIndex, parsed.Slot, previousSlot)
+				}
+				previousSlot = parsed.Slot
+				moduleSlot = parsed.Slot
+			} else if parsed.Slot != moduleSlot {
+				return fmt.Errorf("modules[%d].scenarios[%d].path: slot %02d does not match module slot %02d",
+					moduleIndex, scenarioIndex, parsed.Slot, moduleSlot)
+			}
 			seenScenarios[ref.ID] = struct{}{}
 		}
 	}
 	return nil
+}
+
+func parseNumberedScenarioPath(filename string) (numberedPath, error) {
+	match := numberedScenarioPath.FindStringSubmatch(filename)
+	if match == nil {
+		return numberedPath{}, fmt.Errorf("%q must be {slot}/{nn}-{id}.yaml (for example 01-foundations/01-pod-creation.yaml)", filename)
+	}
+	slot, _ := strconv.Atoi(match[1])
+	index, _ := strconv.Atoi(match[3])
+	if index < 1 {
+		return numberedPath{}, fmt.Errorf("%q lab number must be 01 or higher", filename)
+	}
+	return numberedPath{Slot: slot, ModuleID: match[2], Index: index, ID: match[4]}, nil
+}
+
+func ordinal(n int) string {
+	switch n {
+	case 1:
+		return "first"
+	case 2:
+		return "second"
+	case 3:
+		return "third"
+	default:
+		return fmt.Sprintf("%dth", n)
+	}
 }

@@ -11,7 +11,8 @@ wrongIdea: ""    # misconception to correct
 mentalModel: ""  # how Kubernetes actually behaves (for the debrief)
 revisitLater: "" # later lab that re-tests this without naming the concept
 
-# One block per scenario, catalog order. Copy the block to add a lab.
+# One block per scenario, numbered file order. Copy the block to add a lab.
+# Path in curriculum/ is {slot}/{nn}-{id}.yaml (01 is the first lab).
 # First lab is more guided; last is less. Hints: conceptual → procedural → explicit.
 labs:
   - id: ""

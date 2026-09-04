@@ -321,15 +321,15 @@ func (a *app) resetCommand() *cobra.Command {
 			if err := a.confirm(cmd, force, fmt.Sprintf("Reset %s to its starting state?", scenario.Title)); err != nil {
 				return err
 			}
-			if len(scenario.Reset.Manifests) > 0 {
-				manager, err := a.clusterManager(cmd.Context())
-				if err != nil {
-					return err
-				}
-				manifest, err := scenarioResourceSet(registry, scenario.ID, scenario.Reset)
-				if err != nil {
-					return err
-				}
+			manager, err := a.clusterManager(cmd.Context())
+			if err != nil {
+				return err
+			}
+			manifest, err := scenarioResources(registry, scenario, scenario.Reset)
+			if err != nil {
+				return err
+			}
+			if len(strings.TrimSpace(string(manifest))) > 0 {
 				if err := manager.Reset(cmd.Context(), manifest); err != nil {
 					return err
 				}
@@ -590,6 +590,9 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		return terminal.SessionResult{}, err
 	}
 	namespace, resource := scenarioTarget(scenario)
+	if scenario.Namespace != "" {
+		namespace = scenario.Namespace
+	}
 	observeDelay, err := curriculum.ParseObserveDelay(scenario.ObserveDelay)
 	if err != nil {
 		return terminal.SessionResult{}, err
@@ -724,7 +727,11 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 	if len(scenario.Checks) == 0 {
 		return fmt.Errorf("prepare %s: scenario has no checks", scenario.Title)
 	}
-	if len(scenario.Setup.Manifests) == 0 {
+	manifest, err := scenarioResources(registry, scenario, scenario.Setup)
+	if err != nil {
+		return err
+	}
+	if len(strings.TrimSpace(string(manifest))) == 0 {
 		return nil
 	}
 	first := scenario.Checks[0]
@@ -742,34 +749,16 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 			return nil
 		}
 	}
-	manifest, err := scenarioResourceSet(registry, scenario.ID, scenario.Setup)
-	if err != nil {
-		return err
-	}
 	if err := manager.Apply(ctx, manifest); err != nil {
 		return fmt.Errorf("prepare %s: %w", scenario.Title, err)
 	}
 	return nil
 }
 
-func scenarioResourceSet(registry *curriculum.Registry, id string, resources curriculum.ResourceSet) ([]byte, error) {
-	var manifests [][]byte
-	for _, reference := range resources.Manifests {
-		manifest, err := registry.ReadManifest(id, reference)
-		if err != nil {
-			return nil, err
-		}
-		manifests = append(manifests, manifest)
-	}
-	return []byte(strings.Join(byteStrings(manifests), "\n---\n")), nil
-}
-
-func byteStrings(values [][]byte) []string {
-	result := make([]string, len(values))
-	for i, value := range values {
-		result[i] = string(value)
-	}
-	return result
+func scenarioResources(registry *curriculum.Registry, scenario *curriculum.Scenario, resources curriculum.ResourceSet) ([]byte, error) {
+	return scenario.ComposeResources(resources, func(reference string) ([]byte, error) {
+		return registry.ReadManifest(scenario.ID, reference)
+	})
 }
 
 func scenarioTarget(scenario *curriculum.Scenario) (string, string) {

@@ -78,6 +78,44 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 		}
 		assertStatus(t, result, Success)
 	})
+
+	t.Run("indexed container image matches", func(t *testing.T) {
+		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.27"}]}}`}}}
+		result, err := (FieldEquals{
+			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Field: "spec.containers[0].image", Value: "nginx:1.27",
+		}).Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Success)
+	})
+
+	t.Run("indexed container image differs", func(t *testing.T) {
+		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.26"}]}}`}}}
+		result, err := (FieldEquals{
+			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Field: "spec.containers[0].image", Value: "nginx:1.27",
+		}).Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Wrong)
+		assertContains(t, result.Message, `"nginx:1.26"`)
+	})
+
+	t.Run("missing indexed field is wrong", func(t *testing.T) {
+		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[]}}`}}}
+		result, err := (FieldEquals{
+			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Field: "spec.containers[0].image", Value: "nginx:1.27",
+		}).Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Wrong)
+		assertContains(t, result.Message, "has no field")
+	})
 }
 
 func TestNodeTopology(t *testing.T) {
@@ -338,6 +376,57 @@ func TestAllCombinesResultsWithDeterministicSeverity(t *testing.T) {
 	if result.Message != "deployment exists; container failed; pod becoming ready" {
 		t.Fatalf("message = %q", result.Message)
 	}
+}
+
+func TestPodCreationChecksGradeStoredObject(t *testing.T) {
+	checks := All(
+		ObjectExists{Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx"},
+		FieldEquals{
+			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Field: "spec.containers[0].image", Value: "nginx:1.27",
+		},
+	)
+	missing := fakeResponse{
+		output: `Error from server (NotFound): pods "nginx" not found`,
+		err:    errors.New("not found"),
+	}
+
+	t.Run("missing pod is incomplete", func(t *testing.T) {
+		runner := &fakeRunner{responses: []fakeResponse{missing, missing}}
+		result, err := checks.Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Wrong)
+		assertContains(t, result.Message, "does not exist")
+	})
+
+	t.Run("wrong image is rejected", func(t *testing.T) {
+		wrong := `{"spec":{"containers":[{"name":"web","image":"nginx:1.26"}]}}`
+		runner := &fakeRunner{responses: []fakeResponse{
+			{output: wrong},
+			{output: wrong},
+		}}
+		result, err := checks.Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Wrong)
+		assertContains(t, result.Message, `"nginx:1.26"`)
+	})
+
+	t.Run("declarative pod spec is accepted without Ready", func(t *testing.T) {
+		manifest := `{"spec":{"containers":[{"name":"web","image":"nginx:1.27"}]}}`
+		runner := &fakeRunner{responses: []fakeResponse{
+			{output: manifest},
+			{output: manifest},
+		}}
+		result, err := checks.Evaluate(context.Background(), runner)
+		if err != nil {
+			t.Fatal(err)
+		}
+		assertStatus(t, result, Success)
+	})
 }
 
 func TestNewCheck(t *testing.T) {
