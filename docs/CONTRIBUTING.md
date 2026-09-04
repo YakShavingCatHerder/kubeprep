@@ -4,7 +4,8 @@ KubeCrypt welcomes scenario-pack and engine contributions.
 
 ## Development
 
-1. Install Go 1.24 or newer, Docker, `kind`, and `kubectl`.
+1. Install Go 1.24 or newer and Docker. `kind` and `kubectl` are installed by
+   `kubecrypt setup` when you run the CLI.
 2. Run `go test ./...`.
 3. Run `go test -tags=integration ./tests/integration` for the disposable
    cluster suite.

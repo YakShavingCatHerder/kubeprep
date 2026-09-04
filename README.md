@@ -19,8 +19,10 @@ recompiling KubeCrypt.
 
 - macOS or Linux (amd64 or arm64)
 - Docker (or a Docker-compatible runtime usable by `kind`)
-- `kind`
-- `kubectl`
+
+`kind` and `kubectl` are installed by `kubecrypt setup` into the KubeCrypt
+config directory (pinned to Kubernetes 1.35). You do not need to install them
+yourself.
 
 Run `kubecrypt doctor` for actionable prerequisite checks.
 
@@ -38,8 +40,8 @@ sudo mv kubecrypt /usr/local/bin/
 kubecrypt --version
 ```
 
-You still install Docker, `kind`, and `kubectl` yourself. `kind` and `kubectl`
-will be managed by KubeCrypt in a later change.
+You still need Docker (or a compatible daemon) running. `kubecrypt setup`
+installs pinned `kind` and `kubectl` into the KubeCrypt config directory.
 
 ## Build and set up
 

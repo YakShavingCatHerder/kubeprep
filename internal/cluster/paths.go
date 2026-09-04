@@ -40,6 +40,29 @@ func PathsForDirectory(directory string) Paths {
 	}
 }
 
+// BinDir is where KubeCrypt stores pinned kind and kubectl binaries.
+func (p Paths) BinDir() string {
+	return filepath.Join(p.Directory, "bin")
+}
+
+// KindBinary is the managed kind executable path.
+func (p Paths) KindBinary() string {
+	return filepath.Join(p.BinDir(), "kind")
+}
+
+// KubectlBinary is the managed kubectl executable path.
+func (p Paths) KubectlBinary() string {
+	return filepath.Join(p.BinDir(), "kubectl")
+}
+
+// KubectlExecutable returns the managed kubectl if present, otherwise PATH kubectl.
+func (p Paths) KubectlExecutable() string {
+	if fileExists(p.KubectlBinary()) {
+		return p.KubectlBinary()
+	}
+	return "kubectl"
+}
+
 func (p Paths) ensureDirectory() error {
 	if err := os.MkdirAll(p.Directory, 0o700); err != nil {
 		return fmt.Errorf("create config directory %q: %w", p.Directory, err)

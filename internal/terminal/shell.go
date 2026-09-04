@@ -16,6 +16,7 @@ type ShellSession struct {
 	ScenarioID      string
 	Objective       string
 	PackDirectories []string
+	ToolBinDir      string
 }
 
 // ShellRunner builds a real learner shell. The scenario view hosts it in a
@@ -55,7 +56,7 @@ func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.
 
 	const prelude = `printf '\nKubeCrypt Lab Shell — %s\nIsolated kubeconfig is active. The scenario stays visible in the other pane.\n[?] hint  [F2] check  [F11] zoom  [F10] quit\n\n' "$KUBECRYPT_SCENARIO"; exec "$KUBECRYPT_SHELL"`
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", prelude)
-	cmd.Env = scopedEnvironment(r.Environ(), map[string]string{
+	env := map[string]string{
 		"TERM":                 "xterm-256color",
 		"KUBECONFIG":           session.Kubeconfig,
 		"KUBECRYPT_SCENARIO":   session.ScenarioID,
@@ -65,7 +66,15 @@ func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.
 		"KUBECRYPT_OBJECTIVE":  session.Objective,
 		"KUBECRYPT_PACKS":      strings.Join(session.PackDirectories, string(os.PathListSeparator)),
 		"KUBECRYPT_SHELL":      shell,
-	})
+	}
+	if session.ToolBinDir != "" {
+		current := "/usr/bin:/bin"
+		if value, ok := r.LookupEnv("PATH"); ok && value != "" {
+			current = value
+		}
+		env["PATH"] = session.ToolBinDir + string(os.PathListSeparator) + current
+	}
+	cmd.Env = scopedEnvironment(r.Environ(), env)
 	return cmd, nil
 }
 

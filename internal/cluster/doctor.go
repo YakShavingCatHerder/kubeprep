@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"runtime"
+	"strings"
 )
 
 // CheckResult is one prerequisite check produced by Doctor.
@@ -46,11 +47,9 @@ func (d *Doctor) Check(ctx context.Context) []CheckResult {
 	results := []CheckResult{checkOS(goos)}
 	results = append(results,
 		checkCommand(ctx, runner, "Docker daemon", Command{Name: "docker", Args: []string{"info"}},
-			"Start Docker Desktop or another Docker-compatible daemon, then verify `docker info` succeeds."),
-		checkCommand(ctx, runner, "kind", Command{Name: "kind", Args: []string{"version"}},
-			"Install kind from https://kind.sigs.k8s.io/docs/user/quick-start/#installation."),
-		checkCommand(ctx, runner, "kubectl", Command{Name: "kubectl", Args: []string{"version", "--client"}},
-			"Install kubectl from https://kubernetes.io/docs/tasks/tools/."),
+			"Start Docker Desktop, Colima, OrbStack, or another Docker-compatible daemon, then verify `docker info` succeeds."),
+		d.checkManagedTool(ctx, runner, "kind", KindVersion, d.Paths.KindBinary()),
+		d.checkManagedTool(ctx, runner, "kubectl", KubectlVersion, d.Paths.KubectlBinary()),
 		d.checkConfigDirectory(),
 	)
 	return results
@@ -81,6 +80,27 @@ func checkCommand(ctx context.Context, runner Runner, name string, command Comma
 		detail = "available"
 	}
 	return CheckResult{Name: name, OK: true, Detail: detail}
+}
+
+func (d *Doctor) checkManagedTool(ctx context.Context, runner Runner, name, version, path string) CheckResult {
+	if !fileExists(path) {
+		return CheckResult{
+			Name:   name,
+			OK:     true,
+			Detail: fmt.Sprintf("not installed yet; setup will download %s %s", name, version),
+		}
+	}
+	args := []string{"version"}
+	if name == "kubectl" {
+		args = []string{"version", "--client"}
+	}
+	result := checkCommand(ctx, runner, name, Command{Name: path, Args: args},
+		fmt.Sprintf("Remove %q and run `kubecrypt setup` to reinstall %s %s.", path, name, version))
+	if result.OK && !strings.Contains(result.Detail, version) {
+		result.OK = false
+		result.Remediation = fmt.Sprintf("Remove %q and run `kubecrypt setup` to install %s %s.", path, name, version)
+	}
+	return result
 }
 
 func (d *Doctor) checkConfigDirectory() CheckResult {
