@@ -36,6 +36,7 @@ type ScenarioView struct {
 	Completion          string
 	Debrief             string
 	Kubeconfig          string
+	ToolBinDir          string
 	PackDirectories     []string
 	ObserveWhileRunning bool
 	ObserveDelay        time.Duration
@@ -133,6 +134,7 @@ func (m scenarioViewModel) startLabCmd() tea.Cmd {
 		ScenarioID:      m.scenario.ScenarioID,
 		Objective:       m.scenario.Objective,
 		PackDirectories: m.scenario.PackDirectories,
+		ToolBinDir:      m.scenario.ToolBinDir,
 	}
 	return func() tea.Msg {
 		layout := computeSplitLayout(m.width, m.height, m.zoomed, m.footerHeight())

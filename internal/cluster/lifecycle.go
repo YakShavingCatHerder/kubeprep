@@ -318,8 +318,19 @@ func (m *Manager) runKubectl(ctx context.Context, stdin []byte, args ...string) 
 }
 
 func (m *Manager) command(name string, args ...string) Command {
+	resolved := name
+	switch name {
+	case "kind":
+		if path := m.paths.KindBinary(); fileExists(path) {
+			resolved = path
+		}
+	case "kubectl":
+		if path := m.paths.KubectlBinary(); fileExists(path) {
+			resolved = path
+		}
+	}
 	return Command{
-		Name: name,
+		Name: resolved,
 		Args: append([]string(nil), args...),
 		Env:  []string{"KUBECONFIG=" + m.paths.Kubeconfig},
 	}

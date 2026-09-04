@@ -75,6 +75,17 @@ func (a *app) registry() (*curriculum.Registry, error) {
 	return curriculum.NewRegistry(a.packDirs...)
 }
 
+func (a *app) clusterManager(ctx context.Context) (*cluster.Manager, error) {
+	manager, err := cluster.NewManager(cluster.ExecRunner{})
+	if err != nil {
+		return nil, err
+	}
+	if err := cluster.EnsureTools(ctx, manager.Paths(), cluster.DefaultToolOptions()); err != nil {
+		return nil, err
+	}
+	return manager, nil
+}
+
 func (a *app) doctorCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
@@ -119,7 +130,8 @@ func (a *app) setupCommand() *cobra.Command {
 			if _, err := a.ensureProfile(cmd, store, tutorial, track); err != nil {
 				return err
 			}
-			manager, err := cluster.NewManager(cluster.ExecRunner{})
+			fmt.Fprintln(cmd.ErrOrStderr(), "Ensuring pinned kind and kubectl...")
+			manager, err := a.clusterManager(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -155,7 +167,7 @@ func (a *app) resumeCommand() *cobra.Command {
 		Use:   "resume",
 		Short: "Resume the current training scenario",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			manager, err := cluster.NewManager(cluster.ExecRunner{})
+			manager, err := a.clusterManager(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -241,7 +253,7 @@ func (a *app) statusCommand() *cobra.Command {
 					}
 				}
 			}
-			manager, managerErr := cluster.NewManager(cluster.ExecRunner{})
+			manager, managerErr := a.clusterManager(cmd.Context())
 			if managerErr == nil {
 				_, managerErr = manager.VerifyOwnership(cmd.Context())
 			}
@@ -275,7 +287,7 @@ func (a *app) resetCommand() *cobra.Command {
 					if err := a.confirm(cmd, force, "Destroy the KubeCrypt cluster and clear all learner data?"); err != nil {
 						return err
 					}
-					manager, err := cluster.NewManager(cluster.ExecRunner{})
+					manager, err := a.clusterManager(cmd.Context())
 					if err != nil {
 						return err
 					}
@@ -310,7 +322,7 @@ func (a *app) resetCommand() *cobra.Command {
 				return err
 			}
 			if len(scenario.Reset.Manifests) > 0 {
-				manager, err := cluster.NewManager(cluster.ExecRunner{})
+				manager, err := a.clusterManager(cmd.Context())
 				if err != nil {
 					return err
 				}
@@ -347,7 +359,7 @@ func (a *app) destroyCommand() *cobra.Command {
 			if err := a.confirm(cmd, force, "Destroy the KubeCrypt cluster?"); err != nil {
 				return err
 			}
-			manager, err := cluster.NewManager(cluster.ExecRunner{})
+			manager, err := a.clusterManager(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -428,7 +440,7 @@ func (a *app) checkCommand() *cobra.Command {
 		Use:   "check",
 		Short: "Validate the current scenario's cluster state",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			manager, err := cluster.NewManager(cluster.ExecRunner{})
+			manager, err := a.clusterManager(cmd.Context())
 			if err != nil {
 				return err
 			}
@@ -447,7 +459,7 @@ func (a *app) checkCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			result, err := evaluateScenario(cmd.Context(), scenario, manager.Paths().Kubeconfig)
+			result, err := evaluateScenario(cmd.Context(), scenario, manager)
 			if err != nil {
 				return err
 			}
@@ -607,6 +619,7 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Completion:          strings.TrimSpace(scenario.Completion),
 		Debrief:             strings.TrimSpace(scenario.Debrief.Explanation),
 		Kubeconfig:          manager.Paths().Kubeconfig,
+		ToolBinDir:          manager.Paths().BinDir(),
 		PackDirectories:     append([]string(nil), a.packDirs...),
 		ObserveWhileRunning: scenario.Mode == "orientation",
 		ObserveDelay:        observeDelay,
@@ -615,7 +628,7 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Check: func(checkContext context.Context) (terminal.CheckState, string, error) {
 			timeout, cancel := context.WithTimeout(checkContext, 8*time.Second)
 			defer cancel()
-			result, err := evaluateScenario(timeout, scenario, manager.Paths().Kubeconfig)
+			result, err := evaluateScenario(timeout, scenario, manager)
 			return terminal.CheckState(result.Status.String()), result.Message, err
 		},
 		UseHint:  func(level int) error { return store.RecordHint(scenario.ID, level) },
@@ -721,7 +734,7 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 	}
 	if kind != "" && first.Namespace != "" && first.Name != "" {
 		result, err := (validator.ObjectExists{Kind: kind, Namespace: first.Namespace, Name: first.Name}).
-			Evaluate(ctx, validator.KubectlRunner{Kubeconfig: manager.Paths().Kubeconfig})
+			Evaluate(ctx, validator.KubectlRunner{Kubeconfig: manager.Paths().Kubeconfig, Executable: manager.Paths().KubectlExecutable()})
 		if err != nil {
 			return fmt.Errorf("inspect %s setup: %w", scenario.Title, err)
 		}
@@ -782,7 +795,7 @@ func scenarioTarget(scenario *curriculum.Scenario) (string, string) {
 	return check.Namespace, resource
 }
 
-func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, kubeconfig string) (validator.Result, error) {
+func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, manager *cluster.Manager) (validator.Result, error) {
 	checks := make([]validator.Check, 0, len(scenario.Checks))
 	for index, authored := range scenario.Checks {
 		var definition validator.Definition
@@ -826,7 +839,10 @@ func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, kubeco
 		}
 		checks = append(checks, check)
 	}
-	return validator.All(checks...).Evaluate(ctx, validator.KubectlRunner{Kubeconfig: kubeconfig})
+	return validator.All(checks...).Evaluate(ctx, validator.KubectlRunner{
+		Kubeconfig: manager.Paths().Kubeconfig,
+		Executable: manager.Paths().KubectlExecutable(),
+	})
 }
 
 func (a *app) confirm(cmd *cobra.Command, force bool, prompt string) error {
