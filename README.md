@@ -45,7 +45,7 @@ installs pinned `kind` and `kubectl` into the KubeCrypt config directory.
 
 ## Build and set up
 
-From source (Go 1.24 or newer):
+From source (Go 1.27 or newer; matches CI `gofmt`):
 
 ```sh
 go build -o kubecrypt ./cmd/kubecrypt

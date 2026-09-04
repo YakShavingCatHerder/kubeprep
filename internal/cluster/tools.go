@@ -113,18 +113,18 @@ func pinnedArtifacts(goos, goarch string) (Artifact, Artifact, bool) {
 	}
 	kindName := "kind-" + goos + "-" + goarch
 	return Artifact{
-		Name:    "kind",
-		Version: KindVersion,
-		URL:     "https://kind.sigs.k8s.io/dl/" + KindVersion + "/" + kindName,
-		SHA256:  kindSum,
-		Args:    []string{"version"},
-	}, Artifact{
-		Name:    "kubectl",
-		Version: KubectlVersion,
-		URL:     "https://dl.k8s.io/release/" + KubectlVersion + "/bin/" + goos + "/" + goarch + "/kubectl",
-		SHA256:  kubectlSum,
-		Args:    []string{"version", "--client"},
-	}, true
+			Name:    "kind",
+			Version: KindVersion,
+			URL:     "https://kind.sigs.k8s.io/dl/" + KindVersion + "/" + kindName,
+			SHA256:  kindSum,
+			Args:    []string{"version"},
+		}, Artifact{
+			Name:    "kubectl",
+			Version: KubectlVersion,
+			URL:     "https://dl.k8s.io/release/" + KubectlVersion + "/bin/" + goos + "/" + goarch + "/kubectl",
+			SHA256:  kubectlSum,
+			Args:    []string{"version", "--client"},
+		}, true
 }
 
 func ensureBinary(ctx context.Context, dest string, artifact Artifact, opts ToolOptions) error {
