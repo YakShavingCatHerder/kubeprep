@@ -189,6 +189,80 @@ func TestVerifyOwnershipChecksMarker(t *testing.T) {
 	}
 }
 
+func TestWipeWorkspaceDeletesKubecryptNamespace(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	ca, fingerprint := testCA(t)
+	identity := Identity{
+		ClusterName:   ClusterName,
+		APIServer:     "https://127.0.0.1:6443",
+		CAFingerprint: fingerprint,
+	}
+	writeIdentityForTest(t, paths, identity)
+	runner := ownershipOKRunner(t, identity, ca, func(command Command) (Result, error) {
+		want := []string{"delete", "namespace", "kubecrypt-foundations", "--ignore-not-found=true", "--wait=true", "--timeout=60s"}
+		if command.Name == "kubectl" && slices.Equal(command.Args, want) {
+			return Result{}, nil
+		}
+		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
+	})
+
+	if err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubecrypt-foundations"); err != nil {
+		t.Fatalf("WipeWorkspace() error = %v", err)
+	}
+	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubecrypt-foundations", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 1 {
+		t.Fatalf("namespace delete called %d times, want 1", got)
+	}
+}
+
+func TestWipeWorkspaceRejectsEmptyNamespace(t *testing.T) {
+	err := NewManagerWithPaths(&fakeRunner{}, PathsForDirectory(t.TempDir())).WipeWorkspace(context.Background(), "  ")
+	if err == nil || !strings.Contains(err.Error(), "must not be empty") {
+		t.Fatalf("WipeWorkspace() error = %v, want empty-namespace refusal", err)
+	}
+}
+
+func TestWipeWorkspaceRejectsUnscopedNamespace(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	runner := &fakeRunner{run: func(command Command) (Result, error) {
+		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
+	}}
+	err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kube-system")
+	if err == nil || !strings.Contains(err.Error(), "kubecrypt-") {
+		t.Fatalf("WipeWorkspace() error = %v, want kubecrypt-* refusal", err)
+	}
+	if len(runner.got) != 0 {
+		t.Fatalf("commands = %d, want none after namespace refusal", len(runner.got))
+	}
+}
+
+func TestWipeWorkspaceRejectsUnrelatedCurrentContext(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	_, fingerprint := testCA(t)
+	writeIdentityForTest(t, paths, Identity{
+		ClusterName:   ClusterName,
+		APIServer:     "https://127.0.0.1:6443",
+		CAFingerprint: fingerprint,
+	})
+	runner := &fakeRunner{run: func(command Command) (Result, error) {
+		switch {
+		case command.Name == "kind":
+			return Result{Stdout: ClusterName + "\n"}, nil
+		case command.Name == "kubectl" && slices.Equal(command.Args, []string{"config", "current-context"}):
+			return Result{Stdout: "production\n"}, nil
+		default:
+			return Result{}, fmt.Errorf("mutation or unexpected command reached: %s %v", command.Name, command.Args)
+		}
+	}}
+
+	err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubecrypt-foundations")
+	if !errors.Is(err, ErrOwnershipMismatch) {
+		t.Fatalf("WipeWorkspace() error = %v, want ErrOwnershipMismatch", err)
+	}
+	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubecrypt-foundations", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 0 {
+		t.Fatalf("namespace delete called %d times after ownership rejection", got)
+	}
+}
+
 func TestDestroyIsIdempotentWhenClusterIsAbsent(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	for _, filename := range []string{paths.Ownership, paths.Kubeconfig, paths.KindConfig} {
@@ -244,6 +318,36 @@ func testCA(t *testing.T) (string, string) {
 func sha256ForTest(data []byte) string {
 	sum := sha256.Sum256(data)
 	return fmt.Sprintf("%x", sum)
+}
+
+func ownershipOKRunner(_ *testing.T, identity Identity, ca string, extra func(Command) (Result, error)) *fakeRunner {
+	runner := &fakeRunner{}
+	runner.run = func(command Command) (Result, error) {
+		joined := strings.Join(command.Args, " ")
+		switch {
+		case command.Name == "kind":
+			return Result{Stdout: ClusterName + "\n"}, nil
+		case command.Name == "kubectl" && joined == "config current-context":
+			return Result{Stdout: ContextName}, nil
+		case strings.Contains(joined, ".cluster.server"):
+			return Result{Stdout: identity.APIServer}, nil
+		case strings.Contains(joined, "certificate-authority-data"):
+			return Result{Stdout: ca}, nil
+		case strings.HasPrefix(joined, "get configmap"):
+			data, _ := json.Marshal(map[string]any{"data": map[string]string{
+				"clusterName": identity.ClusterName,
+				"apiServer":   identity.APIServer,
+				"caSHA256":    identity.CAFingerprint,
+			}})
+			return Result{Stdout: string(data)}, nil
+		default:
+			if extra != nil {
+				return extra(command)
+			}
+			return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
+		}
+	}
+	return runner
 }
 
 func writeIdentityForTest(t *testing.T, paths Paths, identity Identity) {
