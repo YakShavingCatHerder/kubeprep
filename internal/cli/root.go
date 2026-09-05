@@ -146,7 +146,7 @@ func (a *app) setupCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := prepareScenario(cmd.Context(), scenario, registry, manager); err != nil {
+			if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
 				return err
 			}
 			if setupOnly {
@@ -193,7 +193,7 @@ func (a *app) resumeCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := prepareScenario(cmd.Context(), scenario, registry, manager); err != nil {
+			if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
 				return err
 			}
 			return a.runTrainingSession(cmd.Context(), scenario, manager, store)
@@ -325,12 +325,19 @@ func (a *app) resetCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := wipeLabWorkspace(cmd.Context(), scenario, manager); err != nil {
+				return err
+			}
 			manifest, err := scenarioResources(registry, scenario, scenario.Reset)
 			if err != nil {
 				return err
 			}
 			if len(strings.TrimSpace(string(manifest))) > 0 {
-				if err := manager.Reset(cmd.Context(), manifest); err != nil {
+				if strings.TrimSpace(scenario.Namespace) != "" {
+					if err := manager.Apply(cmd.Context(), manifest); err != nil {
+						return err
+					}
+				} else if err := manager.Reset(cmd.Context(), manifest); err != nil {
 					return err
 				}
 			}
@@ -577,7 +584,7 @@ func (a *app) runTrainingSession(ctx context.Context, scenario *curriculum.Scena
 		if next == nil {
 			return nil
 		}
-		if err := prepareScenario(ctx, next, registry, manager); err != nil {
+		if err := a.enterScenario(ctx, next, registry, manager, store, true); err != nil {
 			return err
 		}
 		scenario = next
@@ -718,7 +725,34 @@ func scenarioSupportsExperience(scenario *curriculum.Scenario, experience game.E
 	return slices.Contains(scenario.Tracks, string(experience))
 }
 
-func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager) error {
+func (a *app) enterScenario(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager, store *game.Store, wipe bool) error {
+	if err := prepareScenario(ctx, scenario, registry, manager, wipe); err != nil {
+		return err
+	}
+	return store.SelectScenario(scenario.ID)
+}
+
+func wipeIfNewLab(store *game.Store, scenarioID string) bool {
+	progress, err := store.LoadProgress()
+	if err != nil {
+		return true
+	}
+	return shouldWipeLabWorkspace(progress.CurrentScenarioID, scenarioID)
+}
+
+func shouldWipeLabWorkspace(currentScenarioID, enteringScenarioID string) bool {
+	return currentScenarioID != enteringScenarioID
+}
+
+func wipeLabWorkspace(ctx context.Context, scenario *curriculum.Scenario, manager *cluster.Manager) error {
+	namespace := strings.TrimSpace(scenario.Namespace)
+	if namespace == "" {
+		return nil
+	}
+	return manager.WipeWorkspace(ctx, namespace)
+}
+
+func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager, wipe bool) error {
 	for _, capability := range scenario.Requires {
 		if capability != "single-node" && capability != "multi-node" {
 			return fmt.Errorf("prepare %s: cluster profile does not provide capability %q", scenario.Title, capability)
@@ -726,6 +760,11 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 	}
 	if len(scenario.Checks) == 0 {
 		return fmt.Errorf("prepare %s: scenario has no checks", scenario.Title)
+	}
+	if wipe {
+		if err := wipeLabWorkspace(ctx, scenario, manager); err != nil {
+			return fmt.Errorf("prepare %s: %w", scenario.Title, err)
+		}
 	}
 	manifest, err := scenarioResources(registry, scenario, scenario.Setup)
 	if err != nil {
@@ -739,7 +778,7 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 	if kind == "" && first.Type == curriculum.CheckDeploymentAvailable {
 		kind = "deployment"
 	}
-	if kind != "" && first.Namespace != "" && first.Name != "" {
+	if !wipe && kind != "" && first.Namespace != "" && first.Name != "" {
 		result, err := (validator.ObjectExists{Kind: kind, Namespace: first.Namespace, Name: first.Name}).
 			Evaluate(ctx, validator.KubectlRunner{Kubeconfig: manager.Paths().Kubeconfig, Executable: manager.Paths().KubectlExecutable()})
 		if err != nil {

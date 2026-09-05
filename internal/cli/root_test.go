@@ -110,6 +110,23 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	}
 }
 
+func TestShouldWipeLabWorkspace(t *testing.T) {
+	tests := []struct {
+		current  string
+		entering string
+		want     bool
+	}{
+		{current: "", entering: "pod-creation", want: true},
+		{current: "shell-orientation", entering: "pod-creation", want: true},
+		{current: "pod-creation", entering: "pod-creation", want: false},
+	}
+	for _, test := range tests {
+		if got := shouldWipeLabWorkspace(test.current, test.entering); got != test.want {
+			t.Errorf("shouldWipeLabWorkspace(%q, %q) = %v, want %v", test.current, test.entering, got, test.want)
+		}
+	}
+}
+
 func TestFollowingIncompleteScenario(t *testing.T) {
 	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
 	if err != nil {

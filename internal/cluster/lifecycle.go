@@ -135,6 +135,36 @@ func (m *Manager) VerifyOwnership(ctx context.Context) (Identity, error) {
 	return identity, nil
 }
 
+const workspaceWipeTimeout = "60s"
+
+// WipeWorkspace deletes a lab namespace and waits until it is gone. Extra
+// objects the learner created in that namespace go with it. Only kubecrypt-*
+// names are accepted. A missing namespace is ignored.
+func (m *Manager) WipeWorkspace(ctx context.Context, namespace string) error {
+	if err := validateLabWorkspace(namespace); err != nil {
+		return err
+	}
+	if _, err := m.VerifyOwnership(ctx); err != nil {
+		return err
+	}
+	if err := m.runKubectl(ctx, nil, "delete", "namespace", namespace,
+		"--ignore-not-found=true", "--wait=true", "--timeout="+workspaceWipeTimeout); err != nil {
+		return fmt.Errorf("wipe workspace %q: %w", namespace, err)
+	}
+	return nil
+}
+
+func validateLabWorkspace(namespace string) error {
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		return fmt.Errorf("wipe workspace: namespace must not be empty")
+	}
+	if !strings.HasPrefix(namespace, "kubecrypt-") {
+		return fmt.Errorf("wipe workspace: refusing namespace %q (must be kubecrypt-*)", namespace)
+	}
+	return nil
+}
+
 // Apply applies trusted manifest data after verifying cluster ownership.
 func (m *Manager) Apply(ctx context.Context, manifest []byte) error {
 	if _, err := m.VerifyOwnership(ctx); err != nil {
