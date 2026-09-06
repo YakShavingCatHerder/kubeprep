@@ -501,7 +501,7 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Kubeconfig:          manager.Paths().Kubeconfig,
 		ToolBinDir:          manager.Paths().BinDir(),
 		PackDirectories:     append([]string(nil), a.packDirs...),
-		ObserveWhileRunning: scenario.Mode == "orientation",
+		ObserveWhileRunning: observeDelay > 0,
 		ObserveDelay:        observeDelay,
 		HasNext:             next != nil,
 		NextTitle:           nextTitle,
