@@ -21,7 +21,7 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   lab, start from the closest scenario under `curriculum/`.
 - Include metadata, an objective, setup, typed checks, progressive hints,
   completion text, a technical debrief, capability requirements, and
-  deterministic reset data. Orientation scenarios may set `observeDelay`
+  deterministic reset data. Observe-only labs may set `observeDelay`
   (for example `60s`) to pause automatic validation.
 - Add an explicit scenario ID and path to `curriculum/catalog.yaml`.
 - Sync the embedded copy with `make bundle-lesson 01-foundations/01-pod-creation`.

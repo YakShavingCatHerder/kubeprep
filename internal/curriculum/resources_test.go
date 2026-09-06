@@ -36,6 +36,20 @@ func TestComposeResourcesNamespaceOnly(t *testing.T) {
 	}
 }
 
+func TestComposeResourcesIncludesStartingConfiguration(t *testing.T) {
+	scenario := &Scenario{
+		Namespace:                    "kubecrypt-foundations",
+		StartingClusterConfiguration: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: broken\n  namespace: kubecrypt-foundations\n",
+	}
+	got, err := scenario.ComposeResources(ResourceSet{}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(got, []byte("kind: ConfigMap")) || !bytes.Contains(got, []byte("name: broken")) {
+		t.Fatalf("missing starting configuration:\n%s", got)
+	}
+}
+
 func TestComposeResourcesEmptyWithoutNamespace(t *testing.T) {
 	scenario := &Scenario{}
 	got, err := scenario.ComposeResources(ResourceSet{}, nil)

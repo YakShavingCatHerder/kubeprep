@@ -18,26 +18,84 @@ func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if strings.Join(ids, ",") != "shell-orientation,cluster-components,pod-creation" {
+	if strings.Join(ids, ",") != "pod-creation" {
 		t.Fatalf("scenario order = %v", ids)
 	}
-	scenario, err := registry.LoadScenario("cluster-components")
+	scenario, err := registry.LoadScenario("pod-creation")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.Checks[0].Type != CheckNodeTopology {
+	if scenario.Checks[0].Type != CheckObjectExists {
 		t.Fatalf("first check = %q", scenario.Checks[0].Type)
 	}
 }
 
 func TestLoadFileCanonicalScenario(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "00-orientation", "02-cluster-components.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "01-foundations", "01-pod-creation.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "cluster-components" || scenario.Module != "orientation" {
+	if scenario.ID != "pod-creation" || scenario.Module != "foundations" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
+	}
+}
+
+func TestLoadDocumentContributeExampleKeepsAuthoringAndChecks(t *testing.T) {
+	filename := filepath.Join("..", "..", "contribute", "example-module.yaml")
+	document, err := LoadDocument(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if document.Authoring.Slot != "01-foundations" || document.Authoring.Guidance != "guided" {
+		t.Fatalf("authoring identity = %#v", document.Authoring)
+	}
+	if document.Authoring.Intent.Teach == "" || document.Authoring.DesiredClusterConfiguration == "" {
+		t.Fatalf("authoring notes were dropped: %#v", document.Authoring)
+	}
+	if len(document.Authoring.Accept) != 3 || len(document.Authoring.Reject) != 4 || document.Authoring.ProveAlternate == "" {
+		t.Fatalf("solution boundary = %#v", document.Authoring)
+	}
+	scenario := document.Scenario
+	if scenario.ID != "pod-creation" || scenario.Module != "foundations" || scenario.Revision != "2026-09" {
+		t.Fatalf("scenario identity = %#v", scenario)
+	}
+	if len(scenario.Tracks) != 3 || scenario.Namespace != "kubecrypt-foundations" {
+		t.Fatalf("inferred fields = %#v", scenario)
+	}
+	if strings.TrimSpace(scenario.StartingClusterConfiguration) != "" {
+		t.Fatalf("start = %q, want empty", scenario.StartingClusterConfiguration)
+	}
+	if len(scenario.Checks) != 3 {
+		t.Fatalf("checks = %d, want 3", len(scenario.Checks))
+	}
+	if scenario.Checks[0].Type != CheckObjectExists || scenario.Checks[1].Type != CheckFieldEquals || scenario.Checks[2].Type != CheckPodReady {
+		t.Fatalf("checks = %#v", scenario.Checks)
+	}
+	if scenario.Checks[2].Selector != "run=nginx" {
+		t.Fatalf("podReady selector = %q", scenario.Checks[2].Selector)
+	}
+	if strings.TrimSpace(scenario.Completion) == "" || strings.TrimSpace(scenario.Debrief.Explanation) == "" {
+		t.Fatal("completion or debrief was dropped")
+	}
+	loaded, err := LoadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(loaded.Checks) != 3 || loaded.Title != scenario.Title {
+		t.Fatalf("LoadFile dropped graded fields: %#v", loaded)
+	}
+}
+
+func TestLoadFSRejectsUnknownAuthoringFields(t *testing.T) {
+	data, err := yaml.Marshal(validScenario())
+	if err != nil {
+		t.Fatal(err)
+	}
+	data = append([]byte("authoring:\n  mystery: true\n"), data...)
+	_, err = LoadFS(scenarioFS(data), "scenario.yaml")
+	if err == nil || !strings.Contains(err.Error(), "field mystery not found") {
+		t.Fatalf("LoadFS() error = %v", err)
 	}
 }
 
@@ -88,31 +146,9 @@ func TestParseObserveDelay(t *testing.T) {
 	}
 }
 
-func TestBundledOrientationScenariosPauseBeforeValidation(t *testing.T) {
-	registry, err := NewRegistry()
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, id := range []string{"shell-orientation", "cluster-components"} {
-		scenario, err := registry.LoadScenario(id)
-		if err != nil {
-			t.Fatal(err)
-		}
-		delay, err := ParseObserveDelay(scenario.ObserveDelay)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if delay != time.Minute {
-			t.Fatalf("%s observeDelay = %s, want 60s", id, scenario.ObserveDelay)
-		}
-	}
-}
-
 func TestBundledAssetsMatchCanonicalCurriculum(t *testing.T) {
 	files := []string{
 		"catalog.yaml",
-		"00-orientation/01-shell-orientation.yaml",
-		"00-orientation/02-cluster-components.yaml",
 		"01-foundations/01-pod-creation.yaml",
 	}
 	for _, name := range files {
@@ -199,7 +235,7 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if got := strings.Join(ids, ","); got != "shell-orientation,cluster-components,pod-creation,test-scenario" {
+	if got := strings.Join(ids, ","); got != "pod-creation,test-scenario" {
 		t.Fatalf("scenario order = %s", got)
 	}
 }
