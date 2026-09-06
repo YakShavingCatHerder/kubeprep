@@ -39,8 +39,8 @@ func Validate(scenario *Scenario) error {
 	if !idPattern.MatchString(scenario.ID) {
 		return fmt.Errorf("id: %q must be lowercase kebab-case", scenario.ID)
 	}
-	if scenario.Mode != "challenge" && scenario.Mode != "orientation" {
-		return fmt.Errorf("mode: unsupported value %q (want challenge or orientation)", scenario.Mode)
+	if scenario.Mode != "challenge" {
+		return fmt.Errorf("mode: unsupported value %q (want challenge)", scenario.Mode)
 	}
 	if _, err := ParseObserveDelay(scenario.ObserveDelay); err != nil {
 		return err
@@ -97,7 +97,7 @@ func Validate(scenario *Scenario) error {
 	if err := validateNamespaceName(scenario.Namespace); err != nil {
 		return err
 	}
-	requireManifests := scenario.Mode != "orientation" && strings.TrimSpace(scenario.Namespace) == ""
+	requireManifests := strings.TrimSpace(scenario.Namespace) == ""
 	if err := validateManifestRefs("setup.manifests", scenario.Setup.Manifests, requireManifests); err != nil {
 		return err
 	}

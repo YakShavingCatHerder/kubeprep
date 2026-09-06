@@ -6,9 +6,11 @@ const (
 
 // Scenario is a versioned, declarative Kubernetes training scenario.
 type Scenario struct {
-	APIVersion   string                  `yaml:"apiVersion"`
-	ID           string                  `yaml:"id"`
-	Mode         string                  `yaml:"mode"`
+	APIVersion string `yaml:"apiVersion"`
+	ID         string `yaml:"id"`
+	Mode       string `yaml:"mode"`
+	// ObserveDelay is an optional Go duration (for example "60s"). When set,
+	// the training view waits this long before the first automatic check.
 	ObserveDelay string                  `yaml:"observeDelay,omitempty"`
 	Title        string                  `yaml:"title"`
 	Description  string                  `yaml:"description"`

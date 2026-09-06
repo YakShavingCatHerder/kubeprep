@@ -304,6 +304,7 @@ func TestValidateScenario(t *testing.T) {
 		{"inverted Kubernetes range", func(s *Scenario) { s.Kubernetes.Min = "1.36" }, "newer than"},
 		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubecrypt-*"},
 		{"challenge without start state", func(s *Scenario) { s.Setup.Manifests = nil; s.Reset.Manifests = nil }, "must contain at least one manifest"},
+		{"orientation mode is removed", func(s *Scenario) { s.Mode = "orientation" }, "want challenge"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -322,6 +323,14 @@ func TestValidateAllowsChallengeNamespaceWithoutManifests(t *testing.T) {
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
 	scenario.Namespace = "kubecrypt-foundations"
+	if err := Validate(scenario); err != nil {
+		t.Fatalf("Validate(): %v", err)
+	}
+}
+
+func TestValidateAcceptsObserveDelayOnChallenge(t *testing.T) {
+	scenario := validScenario()
+	scenario.ObserveDelay = "60s"
 	if err := Validate(scenario); err != nil {
 		t.Fatalf("Validate(): %v", err)
 	}
