@@ -11,8 +11,8 @@ description: |
   The API server stores that document as cluster state. How you submit it
   does not matter.
 revision: 2026-09
-module: foundations
-namespace: kubecrypt-foundations
+module: pods
+namespace: kubecrypt-beginner
 difficulty: 1
 kubernetes:
   min: "1.35"
@@ -24,7 +24,7 @@ tracks:
   - cka
   - ckad
 objective: |
-  Create a Pod named nginx in namespace kubecrypt-foundations. The Pod's
+  Create a Pod named nginx in namespace kubecrypt-beginner. The Pod's
   container image must be nginx:1.27.
 
   kubectl run, kubectl create, and kubectl apply are all valid. Validation
@@ -39,25 +39,25 @@ concepts:
 checks:
   - type: objectExists
     kind: pod
-    namespace: kubecrypt-foundations
+    namespace: kubecrypt-beginner
     name: nginx
   - type: fieldEquals
     kind: pod
-    namespace: kubecrypt-foundations
+    namespace: kubecrypt-beginner
     name: nginx
     field: spec.containers[0].image
     value: nginx:1.27
 hints:
   - Kubernetes objects are documents submitted to the API server. A Pod is a namespaced API object whose spec names a container image.
-  - Inspect namespace kubecrypt-foundations. Look for a Pod named nginx and read the image in its spec, not only whether a container is Running.
-  - Submit the object. One valid path is kubectl run nginx --image=nginx:1.27 -n kubecrypt-foundations. Applying a Pod manifest with the same name, namespace, and image is equally valid.
+  - Inspect namespace kubecrypt-beginner. Look for a Pod named nginx and read the image in its spec, not only whether a container is Running.
+  - Submit the object. One valid path is kubectl run nginx --image=nginx:1.27 -n kubecrypt-beginner. Applying a Pod manifest with the same name, namespace, and image is equally valid.
 completion: |
-  Pod nginx exists in kubecrypt-foundations with image nginx:1.27. That is
+  Pod nginx exists in kubecrypt-beginner with image nginx:1.27. That is
   the API object you submitted.
 debrief:
   explanation: |
     kubectl sent a Pod object to the API server. The API server persisted it
-    as cluster state: kind Pod, name nginx, namespace kubecrypt-foundations,
+    as cluster state: kind Pod, name nginx, namespace kubecrypt-beginner,
     spec.containers[0].image nginx:1.27.
 
     kubectl run, kubectl create, and kubectl apply are different ways to write
@@ -65,8 +65,8 @@ debrief:
     and the control plane; they are not the document you authored. A Deployment
     named nginx is a different kind, so it would not satisfy this Pod object.
   commands:
-    - kubectl get pod nginx -n kubecrypt-foundations -o yaml
-    - kubectl run nginx --image=nginx:1.27 -n kubecrypt-foundations
+    - kubectl get pod nginx -n kubecrypt-beginner -o yaml
+    - kubectl run nginx --image=nginx:1.27 -n kubecrypt-beginner
     - kubectl apply -f pod.yaml
   concepts:
     - API object

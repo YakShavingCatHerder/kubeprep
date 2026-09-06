@@ -117,7 +117,7 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 }
 
 func TestPinLabWorkspaceUsesDeclaredOrDefault(t *testing.T) {
-	if got := contextNamespaceForLab(&curriculum.Scenario{Namespace: "kubecrypt-foundations"}); got != "kubecrypt-foundations" {
+	if got := contextNamespaceForLab(&curriculum.Scenario{Namespace: "kubecrypt-beginner"}); got != "kubecrypt-beginner" {
 		t.Fatalf("declared namespace = %q", got)
 	}
 	if got := contextNamespaceForLab(&curriculum.Scenario{}); got != "default" {

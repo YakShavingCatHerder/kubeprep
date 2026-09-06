@@ -23,9 +23,9 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   completion text, a technical debrief, capability requirements, and
   deterministic reset data. Labs that need the cluster to settle may set
   `observeDelay` (for example `60s`) to pause the first automatic check.
-- Add an explicit scenario ID and path to `curriculum/catalog.yaml`.
-- Sync the embedded copy with `make bundle-lesson 01-foundations/01-pod-creation`.
-  That checks the catalog `path:` entry and copies both the scenario and
+- Add the lab id under the right path and section in `curriculum/catalog.yaml`.
+- Sync the embedded copy with `make bundle-lesson pods/pod-creation`.
+  That checks the catalog lab id and copies both the scenario and
   `catalog.yaml`. Tests reject drift between `curriculum/` and
   `internal/curriculum/bundled/`.
 - Do not include host shell commands, privileged workloads, host namespaces,

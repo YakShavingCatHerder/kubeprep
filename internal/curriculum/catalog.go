@@ -2,59 +2,99 @@ package curriculum
 
 import (
 	"fmt"
-	"io/fs"
 	"path"
-	"regexp"
-	"strconv"
 	"strings"
 )
 
 const CatalogAPIVersionV1Alpha1 = "kubecrypt.io/catalog/v1alpha1"
 
-// numberedScenarioPath is {slotNN}-{module}/{labNN}-{id}.yaml.
-// Lab numbers are the play order inside that module: 01 is the first lab.
-var numberedScenarioPath = regexp.MustCompile(`^(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)/(\d{2})-([a-z0-9]+(?:-[a-z0-9]+)*)\.(yaml|yml)$`)
-
-type numberedPath struct {
-	Slot     int
-	ModuleID string
-	Index    int
-	ID       string
-}
-
-// Catalog defines one scenario pack and its authored module order.
+// Catalog defines one scenario pack as learner paths of sections of labs.
+// Play order is the nested list. A lab id may appear on more than one path;
+// it is one file, under its section directory.
 type Catalog struct {
-	APIVersion string   `yaml:"apiVersion"`
-	Name       string   `yaml:"name"`
-	Title      string   `yaml:"title"`
-	Revision   string   `yaml:"revision"`
-	Modules    []Module `yaml:"modules"`
+	APIVersion string `yaml:"apiVersion"`
+	Name       string `yaml:"name"`
+	Title      string `yaml:"title"`
+	Revision   string `yaml:"revision"`
+	Paths      []Path `yaml:"paths"`
 }
 
-type Module struct {
-	ID        string        `yaml:"id"`
-	Title     string        `yaml:"title"`
-	Scenarios []ScenarioRef `yaml:"scenarios"`
+// Path is a learner playlist (beginner, cka, ckad).
+type Path struct {
+	ID       string    `yaml:"id"`
+	Title    string    `yaml:"title"`
+	Sections []Section `yaml:"sections"`
 }
 
-type ScenarioRef struct {
-	ID   string `yaml:"id"`
-	Path string `yaml:"path"`
+// Section is a domain grouping (pods, rbac). Lab files live in this directory.
+type Section struct {
+	ID   string   `yaml:"id"`
+	Labs []string `yaml:"labs"`
 }
 
-// ScenarioRefs returns every scenario reference in authored order.
-func (c Catalog) ScenarioRefs() []ScenarioRef {
-	var refs []ScenarioRef
-	for _, module := range c.Modules {
-		refs = append(refs, module.Scenarios...)
+// LabRef is a lab id and the file path derived from its section.
+type LabRef struct {
+	ID      string
+	Section string
+	Path    string
+}
+
+// LabFilePath is {section}/{id}.yaml.
+func LabFilePath(section, id string) string {
+	return path.Join(section, id+".yaml")
+}
+
+// UniqueLabs returns each lab once, in first-seen catalog order.
+func (c Catalog) UniqueLabs() []LabRef {
+	var refs []LabRef
+	seen := make(map[string]struct{})
+	for _, learningPath := range c.Paths {
+		for _, section := range learningPath.Sections {
+			for _, id := range section.Labs {
+				if _, exists := seen[id]; exists {
+					continue
+				}
+				seen[id] = struct{}{}
+				refs = append(refs, LabRef{ID: id, Section: section.ID, Path: LabFilePath(section.ID, id)})
+			}
+		}
 	}
 	return refs
 }
 
+// ScenarioRefs is UniqueLabs as a flat id/path list for loaders and tests.
+func (c Catalog) ScenarioRefs() []LabRef {
+	return c.UniqueLabs()
+}
+
 func (c Catalog) ScenarioIDs() []string {
+	refs := c.UniqueLabs()
+	ids := make([]string, len(refs))
+	for i, ref := range refs {
+		ids[i] = ref.ID
+	}
+	return ids
+}
+
+// PathByID returns the named learner path, or nil.
+func (c Catalog) PathByID(id string) *Path {
+	for i := range c.Paths {
+		if c.Paths[i].ID == id {
+			return &c.Paths[i]
+		}
+	}
+	return nil
+}
+
+// LabIDsOnPath is play order for one learner path.
+func (c Catalog) LabIDsOnPath(pathID string) []string {
+	learningPath := c.PathByID(pathID)
+	if learningPath == nil {
+		return nil
+	}
 	var ids []string
-	for _, ref := range c.ScenarioRefs() {
-		ids = append(ids, ref.ID)
+	for _, section := range learningPath.Sections {
+		ids = append(ids, section.Labs...)
 	}
 	return ids
 }
@@ -75,95 +115,52 @@ func validateCatalog(catalog *Catalog) error {
 	if !revisionPattern.MatchString(catalog.Revision) {
 		return fmt.Errorf("revision: %q must use YYYY-MM format", catalog.Revision)
 	}
-	if len(catalog.Modules) == 0 {
-		return fmt.Errorf("modules: must contain at least one module")
+	if len(catalog.Paths) == 0 {
+		return fmt.Errorf("paths: must contain at least one path")
 	}
-	seenModules := make(map[string]struct{})
-	seenScenarios := make(map[string]struct{})
-	previousSlot := -1
-	for moduleIndex, module := range catalog.Modules {
-		if !idPattern.MatchString(module.ID) {
-			return fmt.Errorf("modules[%d].id: %q must be lowercase kebab-case", moduleIndex, module.ID)
+	seenPaths := make(map[string]struct{})
+	labSection := make(map[string]string)
+	for pathIndex, learningPath := range catalog.Paths {
+		if !idPattern.MatchString(learningPath.ID) {
+			return fmt.Errorf("paths[%d].id: %q must be lowercase kebab-case", pathIndex, learningPath.ID)
 		}
-		if _, exists := seenModules[module.ID]; exists {
-			return fmt.Errorf("modules[%d].id: duplicate module %q", moduleIndex, module.ID)
+		if _, exists := seenPaths[learningPath.ID]; exists {
+			return fmt.Errorf("paths[%d].id: duplicate path %q", pathIndex, learningPath.ID)
 		}
-		seenModules[module.ID] = struct{}{}
-		if strings.TrimSpace(module.Title) == "" {
-			return fmt.Errorf("modules[%d].title: must not be empty", moduleIndex)
+		seenPaths[learningPath.ID] = struct{}{}
+		if strings.TrimSpace(learningPath.Title) == "" {
+			return fmt.Errorf("paths[%d].title: must not be empty", pathIndex)
 		}
-		if len(module.Scenarios) == 0 {
-			return fmt.Errorf("modules[%d].scenarios: must contain at least one scenario", moduleIndex)
+		if len(learningPath.Sections) == 0 {
+			return fmt.Errorf("paths[%d].sections: must contain at least one section", pathIndex)
 		}
-		moduleSlot := -1
-		for scenarioIndex, ref := range module.Scenarios {
-			if !idPattern.MatchString(ref.ID) {
-				return fmt.Errorf("modules[%d].scenarios[%d].id: %q must be lowercase kebab-case", moduleIndex, scenarioIndex, ref.ID)
+		seenSections := make(map[string]struct{})
+		seenOnPath := make(map[string]struct{})
+		for sectionIndex, section := range learningPath.Sections {
+			if !idPattern.MatchString(section.ID) {
+				return fmt.Errorf("paths[%d].sections[%d].id: %q must be lowercase kebab-case", pathIndex, sectionIndex, section.ID)
 			}
-			if _, exists := seenScenarios[ref.ID]; exists {
-				return fmt.Errorf("modules[%d].scenarios[%d].id: duplicate scenario %q", moduleIndex, scenarioIndex, ref.ID)
+			if _, exists := seenSections[section.ID]; exists {
+				return fmt.Errorf("paths[%d].sections[%d].id: duplicate section %q", pathIndex, sectionIndex, section.ID)
 			}
-			if !fs.ValidPath(ref.Path) || path.Clean(ref.Path) != ref.Path {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: %q must be a clean relative path", moduleIndex, scenarioIndex, ref.Path)
+			seenSections[section.ID] = struct{}{}
+			if len(section.Labs) == 0 {
+				return fmt.Errorf("paths[%d].sections[%d].labs: must contain at least one lab", pathIndex, sectionIndex)
 			}
-			ext := path.Ext(ref.Path)
-			if ext != ".yaml" && ext != ".yml" {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: %q must reference YAML", moduleIndex, scenarioIndex, ref.Path)
-			}
-			parsed, parseErr := parseNumberedScenarioPath(ref.Path)
-			if parseErr != nil {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: %w", moduleIndex, scenarioIndex, parseErr)
-			}
-			if parsed.ModuleID != module.ID {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: directory module %q does not match catalog module %q",
-					moduleIndex, scenarioIndex, parsed.ModuleID, module.ID)
-			}
-			if parsed.ID != ref.ID {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: file id %q does not match catalog id %q",
-					moduleIndex, scenarioIndex, parsed.ID, ref.ID)
-			}
-			if parsed.Index != scenarioIndex+1 {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: lab number %02d must be %02d, the %s lab in module %q",
-					moduleIndex, scenarioIndex, parsed.Index, scenarioIndex+1, ordinal(scenarioIndex+1), module.ID)
-			}
-			if scenarioIndex == 0 {
-				if parsed.Slot <= previousSlot {
-					return fmt.Errorf("modules[%d]: slot %02d must come after slot %02d", moduleIndex, parsed.Slot, previousSlot)
+			for labIndex, id := range section.Labs {
+				if !idPattern.MatchString(id) {
+					return fmt.Errorf("paths[%d].sections[%d].labs[%d]: %q must be lowercase kebab-case", pathIndex, sectionIndex, labIndex, id)
 				}
-				previousSlot = parsed.Slot
-				moduleSlot = parsed.Slot
-			} else if parsed.Slot != moduleSlot {
-				return fmt.Errorf("modules[%d].scenarios[%d].path: slot %02d does not match module slot %02d",
-					moduleIndex, scenarioIndex, parsed.Slot, moduleSlot)
+				if _, exists := seenOnPath[id]; exists {
+					return fmt.Errorf("paths[%d].sections[%d].labs[%d]: duplicate lab %q on path %q", pathIndex, sectionIndex, labIndex, id, learningPath.ID)
+				}
+				seenOnPath[id] = struct{}{}
+				if previous, exists := labSection[id]; exists && previous != section.ID {
+					return fmt.Errorf("paths[%d].sections[%d].labs[%d]: lab %q is already in section %q", pathIndex, sectionIndex, labIndex, id, previous)
+				}
+				labSection[id] = section.ID
 			}
-			seenScenarios[ref.ID] = struct{}{}
 		}
 	}
 	return nil
-}
-
-func parseNumberedScenarioPath(filename string) (numberedPath, error) {
-	match := numberedScenarioPath.FindStringSubmatch(filename)
-	if match == nil {
-		return numberedPath{}, fmt.Errorf("%q must be {slot}/{nn}-{id}.yaml (for example 01-foundations/01-pod-creation.yaml)", filename)
-	}
-	slot, _ := strconv.Atoi(match[1])
-	index, _ := strconv.Atoi(match[3])
-	if index < 1 {
-		return numberedPath{}, fmt.Errorf("%q lab number must be 01 or higher", filename)
-	}
-	return numberedPath{Slot: slot, ModuleID: match[2], Index: index, ID: match[4]}, nil
-}
-
-func ordinal(n int) string {
-	switch n {
-	case 1:
-		return "first"
-	case 2:
-		return "second"
-	case 3:
-		return "third"
-	default:
-		return fmt.Sprintf("%dth", n)
-	}
 }

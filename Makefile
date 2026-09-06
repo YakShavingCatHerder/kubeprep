@@ -6,12 +6,12 @@ ifeq ($(strip $(GOBIN)),)
 GOBIN := $(shell go env GOPATH)/bin
 endif
 
-# Accept: make bundle-lesson 01-foundations/01-pod-creation
+# Accept: make bundle-lesson pods/pod-creation
 ifeq ($(firstword $(MAKECMDGOALS)),bundle-lesson)
 POS_LESSON := $(wordlist 2,$(words $(MAKECMDGOALS)),$(MAKECMDGOALS))
 ifneq ($(POS_LESSON),)
 ifneq ($(words $(POS_LESSON)),1)
-$(error usage: make bundle-lesson 01-foundations/01-pod-creation)
+$(error usage: make bundle-lesson pods/pod-creation)
 endif
 LESSON ?= $(POS_LESSON)
 $(POS_LESSON):

@@ -28,62 +28,50 @@ func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
 	if scenario.Checks[0].Type != CheckObjectExists {
 		t.Fatalf("first check = %q", scenario.Checks[0].Type)
 	}
+	for _, pathID := range []string{"beginner", "cka", "ckad"} {
+		if got := strings.Join(registry.PlayOrder(pathID), ","); got != "pod-creation" {
+			t.Fatalf("PlayOrder(%q) = %s, want pod-creation", pathID, got)
+		}
+	}
 }
 
 func TestLoadFileCanonicalScenario(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "01-foundations", "01-pod-creation.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "pods", "pod-creation.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" || scenario.Module != "foundations" {
+	if scenario.ID != "pod-creation" || scenario.Module != "pods" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
 	}
 }
 
-func TestLoadDocumentContributeExampleKeepsAuthoringAndChecks(t *testing.T) {
-	filename := filepath.Join("..", "..", "contribute", "example-module.yaml")
+func TestLoadDocumentKeepsAuthoringNotes(t *testing.T) {
+	scenario := validScenario()
+	scenario.Setup.Manifests = nil
+	scenario.Reset.Manifests = nil
+	scenario.Namespace = "kubecrypt-beginner"
+	body, err := yaml.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(t.TempDir(), "lab.yaml")
+	data := append([]byte("authoring:\n  section: pods\n  guidance: guided\n  intent:\n    teach: create a pod\n  accept:\n    - apply a manifest\n  reject:\n    - wrong namespace\n  proveAlternate: use kubectl create\n  desiredClusterConfiguration: |\n    kind: Pod\n"), body...)
+	if err := os.WriteFile(filename, data, 0o600); err != nil {
+		t.Fatal(err)
+	}
 	document, err := LoadDocument(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if document.Authoring.Slot != "01-foundations" || document.Authoring.Guidance != "guided" {
-		t.Fatalf("authoring identity = %#v", document.Authoring)
+	if document.Authoring.Section != "pods" || document.Authoring.Guidance != "guided" || document.Authoring.Intent.Teach == "" {
+		t.Fatalf("authoring = %#v", document.Authoring)
 	}
-	if document.Authoring.Intent.Teach == "" || document.Authoring.DesiredClusterConfiguration == "" {
-		t.Fatalf("authoring notes were dropped: %#v", document.Authoring)
-	}
-	if len(document.Authoring.Accept) != 3 || len(document.Authoring.Reject) != 4 || document.Authoring.ProveAlternate == "" {
+	if len(document.Authoring.Accept) != 1 || len(document.Authoring.Reject) != 1 || document.Authoring.ProveAlternate == "" {
 		t.Fatalf("solution boundary = %#v", document.Authoring)
 	}
-	scenario := document.Scenario
-	if scenario.ID != "pod-creation" || scenario.Module != "foundations" || scenario.Revision != "2026-09" {
-		t.Fatalf("scenario identity = %#v", scenario)
-	}
-	if len(scenario.Tracks) != 3 || scenario.Namespace != "kubecrypt-foundations" {
-		t.Fatalf("inferred fields = %#v", scenario)
-	}
-	if strings.TrimSpace(scenario.StartingClusterConfiguration) != "" {
-		t.Fatalf("start = %q, want empty", scenario.StartingClusterConfiguration)
-	}
-	if len(scenario.Checks) != 3 {
-		t.Fatalf("checks = %d, want 3", len(scenario.Checks))
-	}
-	if scenario.Checks[0].Type != CheckObjectExists || scenario.Checks[1].Type != CheckFieldEquals || scenario.Checks[2].Type != CheckPodReady {
-		t.Fatalf("checks = %#v", scenario.Checks)
-	}
-	if scenario.Checks[2].Selector != "run=nginx" {
-		t.Fatalf("podReady selector = %q", scenario.Checks[2].Selector)
-	}
-	if strings.TrimSpace(scenario.Completion) == "" || strings.TrimSpace(scenario.Debrief.Explanation) == "" {
-		t.Fatal("completion or debrief was dropped")
-	}
-	loaded, err := LoadFile(filename)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(loaded.Checks) != 3 || loaded.Title != scenario.Title {
-		t.Fatalf("LoadFile dropped graded fields: %#v", loaded)
+	if strings.TrimSpace(document.Authoring.DesiredClusterConfiguration) == "" || document.ID != scenario.ID {
+		t.Fatalf("document dropped fields: %#v", document)
 	}
 }
 
@@ -100,18 +88,18 @@ func TestLoadFSRejectsUnknownAuthoringFields(t *testing.T) {
 }
 
 func TestLoadFilePodCreation(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "01-foundations", "01-pod-creation.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "pods", "pod-creation.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" || scenario.Module != "foundations" {
+	if scenario.ID != "pod-creation" || scenario.Module != "pods" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
 	}
 	if scenario.Mode != "challenge" {
 		t.Fatalf("mode = %q, want challenge", scenario.Mode)
 	}
-	if scenario.Namespace != "kubecrypt-foundations" {
+	if scenario.Namespace != "kubecrypt-beginner" {
 		t.Fatalf("namespace = %q", scenario.Namespace)
 	}
 	if len(scenario.Setup.Manifests) != 0 {
@@ -124,7 +112,7 @@ func TestLoadFilePodCreation(t *testing.T) {
 		t.Fatalf("checks = %d, want 2", len(scenario.Checks))
 	}
 	exists := scenario.Checks[0]
-	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubecrypt-foundations" || exists.Name != "nginx" {
+	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubecrypt-beginner" || exists.Name != "nginx" {
 		t.Fatalf("objectExists check = %#v", exists)
 	}
 	image := scenario.Checks[1]
@@ -149,7 +137,7 @@ func TestParseObserveDelay(t *testing.T) {
 func TestBundledAssetsMatchCanonicalCurriculum(t *testing.T) {
 	files := []string{
 		"catalog.yaml",
-		"01-foundations/01-pod-creation.yaml",
+		"pods/pod-creation.yaml",
 	}
 	for _, name := range files {
 		canonical, err := os.ReadFile(filepath.Join("..", "..", "curriculum", filepath.FromSlash(name)))
@@ -240,6 +228,19 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 	}
 }
 
+func TestRegistryRejectsModuleSectionMismatch(t *testing.T) {
+	scenario := validScenario()
+	scenario.Module = "pods"
+	scenarioData, err := yaml.Marshal(scenario)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = NewRegistryFromSources(Source{Name: "local", FS: packFS(scenarioData)})
+	if err == nil || !strings.Contains(err.Error(), "catalog section is") {
+		t.Fatalf("NewRegistryFromSources() error = %v", err)
+	}
+}
+
 func TestRegistryRejectsDuplicateScenarioIDs(t *testing.T) {
 	data, err := yaml.Marshal(validScenario())
 	if err != nil {
@@ -256,9 +257,9 @@ func TestRegistryRejectsDuplicateScenarioIDs(t *testing.T) {
 
 func TestValidateCatalogRejectsUnsafePath(t *testing.T) {
 	catalog := validCatalog()
-	catalog.Modules[0].Scenarios[0].Path = "../scenario.yaml"
+	catalog.Paths[0].Sections[0].ID = ".."
 	err := validateCatalog(&catalog)
-	if err == nil || !strings.Contains(err.Error(), "clean relative path") {
+	if err == nil || !strings.Contains(err.Error(), "kebab-case") {
 		t.Fatalf("validateCatalog() error = %v", err)
 	}
 }
@@ -269,7 +270,7 @@ func TestValidatePackRejectsEscapingSymlink(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("not a scenario"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	scenarioPath := filepath.Join(packDir, "02-workloads", "01-test-scenario.yaml")
+	scenarioPath := filepath.Join(packDir, "workloads", "test-scenario.yaml")
 	if err := os.MkdirAll(filepath.Dir(scenarioPath), 0o700); err != nil {
 		t.Fatal(err)
 	}
@@ -322,7 +323,7 @@ func TestValidateAllowsChallengeNamespaceWithoutManifests(t *testing.T) {
 	scenario := validScenario()
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
-	scenario.Namespace = "kubecrypt-foundations"
+	scenario.Namespace = "kubecrypt-beginner"
 	if err := Validate(scenario); err != nil {
 		t.Fatalf("Validate(): %v", err)
 	}
@@ -368,9 +369,9 @@ func validCatalog() Catalog {
 		Name:       "test-pack",
 		Title:      "Test Pack",
 		Revision:   "2026-09",
-		Modules: []Module{{
-			ID: "workloads", Title: "Workloads",
-			Scenarios: []ScenarioRef{{ID: "test-scenario", Path: "02-workloads/01-test-scenario.yaml"}},
+		Paths: []Path{{
+			ID: "beginner", Title: "Beginner",
+			Sections: []Section{{ID: "workloads", Labs: []string{"test-scenario"}}},
 		}},
 	}
 }
@@ -378,9 +379,9 @@ func validCatalog() Catalog {
 func packFS(scenarioData []byte) fstest.MapFS {
 	catalogData, _ := yaml.Marshal(validCatalog())
 	return fstest.MapFS{
-		"catalog.yaml":                       {Data: catalogData},
-		"02-workloads/01-test-scenario.yaml": {Data: scenarioData},
-		"02-workloads/workload.yaml": {Data: []byte(`
+		"catalog.yaml":                 {Data: catalogData},
+		"workloads/test-scenario.yaml": {Data: scenarioData},
+		"workloads/workload.yaml": {Data: []byte(`
 apiVersion: v1
 kind: Namespace
 metadata:

@@ -2,9 +2,22 @@ apiVersion: kubecrypt.io/catalog/v1alpha1
 name: core
 title: KubeCrypt Core Scenarios
 revision: 2026-09
-modules:
-  - id: foundations
-    title: Foundations
-    scenarios:
-      - id: pod-creation
-        path: 01-foundations/01-pod-creation.yaml
+paths:
+  - id: beginner
+    title: Beginner
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
+  - id: cka
+    title: CKA
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
+  - id: ckad
+    title: CKAD
+    sections:
+      - id: pods
+        labs:
+          - pod-creation

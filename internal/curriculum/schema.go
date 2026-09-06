@@ -116,7 +116,7 @@ type Document struct {
 
 // Authoring is human/agent notes. It is not graded and is not applied.
 type Authoring struct {
-	Slot                        string   `yaml:"slot,omitempty"`
+	Section                     string   `yaml:"section,omitempty"`
 	Guidance                    string   `yaml:"guidance,omitempty"`
 	Intent                      Intent   `yaml:"intent,omitempty"`
 	DesiredClusterConfiguration string   `yaml:"desiredClusterConfiguration,omitempty"`

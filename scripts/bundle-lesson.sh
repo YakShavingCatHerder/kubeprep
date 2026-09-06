@@ -1,11 +1,11 @@
 #!/bin/sh
 # Copy a canonical scenario and catalog.yaml into the embedded pack.
-# usage: sh scripts/bundle-lesson.sh 0x-subject-name/0x-lab-name
+# usage: sh scripts/bundle-lesson.sh pods/pod-creation
 
 set -eu
 
 if [ "$#" -ne 1 ] || [ -z "$1" ]; then
-	echo "usage: make bundle-lesson 0x-subject-name/0x-lab-name" >&2
+	echo "usage: make bundle-lesson section/lab-id" >&2
 	exit 1
 fi
 
@@ -44,7 +44,7 @@ fi
 case $rel in
 catalog.yaml | catalog.yml)
 	echo "bundle-lesson: catalog.yaml is copied automatically when bundling a scenario" >&2
-	echo "usage: make bundle-lesson 0x-subject-name/0x-lab-name" >&2
+	echo "usage: make bundle-lesson section/lab-id" >&2
 	exit 1
 	;;
 esac
@@ -54,12 +54,13 @@ if [ ! -f curriculum/catalog.yaml ]; then
 	exit 1
 fi
 
-escaped=$(printf '%s' "$rel" | sed 's/[.[\*^$()+?{|\\]/\\&/g')
-if ! grep -Eq "^[[:space:]]+path:[[:space:]]+${escaped}[[:space:]]*$" curriculum/catalog.yaml; then
-	echo "bundle-lesson: $rel is not listed in curriculum/catalog.yaml" >&2
-	echo "add a scenarios path entry before bundling, for example:" >&2
-	echo "  - id: $(basename "$rel" .yaml | sed 's/\.yml$//; s/^[0-9][0-9]-//')" >&2
-	echo "    path: $rel" >&2
+lab_id=$(basename "$rel" .yaml)
+lab_id=${lab_id%.yml}
+escaped=$(printf '%s' "$lab_id" | sed 's/[.[\*^$()+?{|\\]/\\&/g')
+if ! grep -Eq "^[[:space:]]+-[[:space:]]+${escaped}[[:space:]]*$" curriculum/catalog.yaml; then
+	echo "bundle-lesson: $lab_id is not listed in curriculum/catalog.yaml" >&2
+	echo "add it under paths[].sections[].labs, for example:" >&2
+	echo "  - $lab_id" >&2
 	exit 1
 fi
 

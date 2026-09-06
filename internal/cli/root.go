@@ -8,7 +8,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"slices"
 	"strings"
 	"time"
 
@@ -240,28 +239,28 @@ func (a *app) statusCommand() *cobra.Command {
 				return err
 			}
 			fmt.Fprintf(cmd.OutOrStdout(), "Current scenario: %s (%s)\n", active.Title, active.ID)
+			pathID := pathIDForExperience(profile.Experience)
 			for _, catalog := range registry.Catalogs() {
 				fmt.Fprintf(cmd.OutOrStdout(), "Pack: %s (%s)\n", catalog.Title, catalog.Name)
-				for _, module := range catalog.Modules {
-					var moduleStatus strings.Builder
-					for _, ref := range module.Scenarios {
-						scenario, loadErr := registry.LoadScenario(ref.ID)
+				learningPath := catalog.PathByID(pathID)
+				if learningPath == nil {
+					continue
+				}
+				fmt.Fprintf(cmd.OutOrStdout(), "%s\n", learningPath.Title)
+				for _, section := range learningPath.Sections {
+					fmt.Fprintf(cmd.OutOrStdout(), "  %s\n", section.ID)
+					for _, id := range section.Labs {
+						scenario, loadErr := registry.LoadScenario(id)
 						if loadErr != nil {
 							return loadErr
 						}
-						if !scenarioSupportsExperience(scenario, profile.Experience) {
-							continue
-						}
-						scenarioProgress := progress.Scenarios[ref.ID]
+						scenarioProgress := progress.Scenarios[id]
 						if scenarioProgress.CompletedAt == nil {
-							fmt.Fprintf(&moduleStatus, "  %s: incomplete (hints %v)\n", scenario.Title, scenarioProgress.HintsUsed)
+							fmt.Fprintf(cmd.OutOrStdout(), "    %s: incomplete (hints %v)\n", scenario.Title, scenarioProgress.HintsUsed)
 						} else {
-							fmt.Fprintf(&moduleStatus, "  %s: completed %s (hints %v)\n",
+							fmt.Fprintf(cmd.OutOrStdout(), "    %s: completed %s (hints %v)\n",
 								scenario.Title, scenarioProgress.CompletedAt.Format(time.RFC3339), scenarioProgress.HintsUsed)
 						}
-					}
-					if moduleStatus.Len() > 0 {
-						fmt.Fprintf(cmd.OutOrStdout(), "%s\n%s", module.Title, moduleStatus.String())
 					}
 				}
 			}
@@ -400,7 +399,7 @@ func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, requestedTrac
 			return game.Profile{}, errors.New("first non-interactive start requires --track=beginner, --track=cka, or --track=ckad")
 		}
 		fmt.Fprintln(cmd.OutOrStdout(), "Which track are you following?")
-		fmt.Fprintln(cmd.OutOrStdout(), "  1) Foundations\n  2) CKA\n  3) CKAD")
+		fmt.Fprintln(cmd.OutOrStdout(), "  1) Beginner\n  2) CKA\n  3) CKAD")
 		fmt.Fprint(cmd.OutOrStdout(), "Choose 1-3: ")
 		line, readErr := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
@@ -418,7 +417,7 @@ func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, requestedTrac
 		}
 	}
 	switch track {
-	case "beginner", "foundations":
+	case "beginner":
 		profile.Experience = game.ExperienceBeginner
 	case "cka":
 		profile.Experience = game.ExperienceCKACandidate
@@ -522,11 +521,7 @@ func currentScenario(store *game.Store, registry *curriculum.Registry) (*curricu
 	if err != nil {
 		return nil, err
 	}
-	ids := registry.ScenarioIDs()
-	if len(ids) == 0 {
-		return nil, errors.New("active scenario packs contain no scenarios")
-	}
-	if err := store.RetainScenarios(ids); err != nil {
+	if err := store.RetainScenarios(registry.ScenarioIDs()); err != nil {
 		return nil, fmt.Errorf("sanitize scenario progress: %w", err)
 	}
 	progress, err := store.LoadProgress()
@@ -536,24 +531,22 @@ func currentScenario(store *game.Store, registry *curriculum.Registry) (*curricu
 	if progress.CurrentScenarioID != "" {
 		return registry.LoadScenario(progress.CurrentScenarioID)
 	}
-	var lastApplicable *curriculum.Scenario
+	ids := registry.PlayOrder(pathIDForExperience(profile.Experience))
+	if len(ids) == 0 {
+		return nil, fmt.Errorf("active scenario packs contain no scenarios for track %q", profile.Experience)
+	}
+	var last *curriculum.Scenario
 	for _, id := range ids {
 		scenario, loadErr := registry.LoadScenario(id)
 		if loadErr != nil {
 			return nil, loadErr
 		}
-		if !scenarioSupportsExperience(scenario, profile.Experience) {
-			continue
-		}
-		lastApplicable = scenario
+		last = scenario
 		if progress.Scenarios[id].CompletedAt == nil {
 			return scenario, nil
 		}
 	}
-	if lastApplicable == nil {
-		return nil, fmt.Errorf("active scenario packs contain no scenarios for track %q", profile.Experience)
-	}
-	return lastApplicable, nil
+	return last, nil
 }
 
 func nextIncompleteScenario(store *game.Store, registry *curriculum.Registry) (*curriculum.Scenario, error) {
@@ -570,13 +563,10 @@ func followingIncompleteScenario(store *game.Store, registry *curriculum.Registr
 		return nil, err
 	}
 	seenCurrent := afterID == ""
-	for _, id := range registry.ScenarioIDs() {
+	for _, id := range registry.PlayOrder(pathIDForExperience(profile.Experience)) {
 		scenario, loadErr := registry.LoadScenario(id)
 		if loadErr != nil {
 			return nil, loadErr
-		}
-		if !scenarioSupportsExperience(scenario, profile.Experience) {
-			continue
 		}
 		if !seenCurrent {
 			if id == afterID {
@@ -591,8 +581,8 @@ func followingIncompleteScenario(store *game.Store, registry *curriculum.Registr
 	return nil, nil
 }
 
-func scenarioSupportsExperience(scenario *curriculum.Scenario, experience game.Experience) bool {
-	return slices.Contains(scenario.Tracks, string(experience))
+func pathIDForExperience(experience game.Experience) string {
+	return string(experience)
 }
 
 func (a *app) enterScenario(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager, store *game.Store, wipe bool) error {

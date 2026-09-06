@@ -5,55 +5,38 @@ import (
 	"testing"
 )
 
-func TestValidateCatalogRequiresNumberedLabPaths(t *testing.T) {
+func TestValidateCatalogRejectsInvalidNesting(t *testing.T) {
 	tests := []struct {
 		name   string
 		mutate func(*Catalog)
 		want   string
 	}{
 		{
-			name:   "unnumbered path",
-			mutate: func(c *Catalog) { c.Modules[0].Scenarios[0].Path = "02-workloads/test-scenario.yaml" },
-			want:   "{slot}/{nn}-{id}.yaml",
+			name:   "empty paths",
+			mutate: func(c *Catalog) { c.Paths = nil },
+			want:   "at least one path",
 		},
 		{
-			name:   "lab number skips first",
-			mutate: func(c *Catalog) { c.Modules[0].Scenarios[0].Path = "02-workloads/02-test-scenario.yaml" },
-			want:   "lab number 02 must be 01",
+			name:   "duplicate path id",
+			mutate: func(c *Catalog) { c.Paths = append(c.Paths, c.Paths[0]) },
+			want:   "duplicate path",
 		},
 		{
-			name:   "path id mismatches catalog id",
-			mutate: func(c *Catalog) { c.Modules[0].Scenarios[0].Path = "02-workloads/01-other-lab.yaml" },
-			want:   "file id",
-		},
-		{
-			name:   "path module mismatches catalog module",
-			mutate: func(c *Catalog) { c.Modules[0].Scenarios[0].Path = "02-foundations/01-test-scenario.yaml" },
-			want:   "directory module",
-		},
-		{
-			name: "modules listed out of slot order",
+			name: "lab listed twice on one path",
 			mutate: func(c *Catalog) {
-				c.Modules = []Module{
-					{ID: "workloads", Title: "Workloads", Scenarios: []ScenarioRef{
-						{ID: "later-lab", Path: "02-workloads/01-later-lab.yaml"},
-					}},
-					{ID: "foundations", Title: "Foundations", Scenarios: []ScenarioRef{
-						{ID: "pod-creation", Path: "01-foundations/01-pod-creation.yaml"},
-					}},
-				}
+				c.Paths[0].Sections[0].Labs = []string{"test-scenario", "test-scenario"}
 			},
-			want: "must come after slot 02",
+			want: "duplicate lab",
 		},
 		{
-			name: "second lab not numbered 02",
+			name: "same lab in two sections",
 			mutate: func(c *Catalog) {
-				c.Modules[0].Scenarios = []ScenarioRef{
-					{ID: "test-scenario", Path: "02-workloads/01-test-scenario.yaml"},
-					{ID: "later-lab", Path: "02-workloads/03-later-lab.yaml"},
-				}
+				c.Paths = append(c.Paths, Path{
+					ID: "cka", Title: "CKA",
+					Sections: []Section{{ID: "other", Labs: []string{"test-scenario"}}},
+				})
 			},
-			want: "lab number 03 must be 02",
+			want: "already in section",
 		},
 	}
 	for _, tt := range tests {
@@ -68,12 +51,25 @@ func TestValidateCatalogRequiresNumberedLabPaths(t *testing.T) {
 	}
 }
 
-func TestParseNumberedScenarioPath(t *testing.T) {
-	got, err := parseNumberedScenarioPath("01-foundations/01-pod-creation.yaml")
-	if err != nil {
+func TestLabFilePath(t *testing.T) {
+	if got := LabFilePath("pods", "pod-creation"); got != "pods/pod-creation.yaml" {
+		t.Fatalf("LabFilePath() = %q", got)
+	}
+}
+
+func TestCatalogLabIDsOnPathAllowsReuse(t *testing.T) {
+	catalog := validCatalog()
+	catalog.Paths = append(catalog.Paths, Path{
+		ID: "cka", Title: "CKA",
+		Sections: []Section{{ID: "workloads", Labs: []string{"test-scenario"}}},
+	})
+	if err := validateCatalog(&catalog); err != nil {
 		t.Fatal(err)
 	}
-	if got.Slot != 1 || got.ModuleID != "foundations" || got.Index != 1 || got.ID != "pod-creation" {
-		t.Fatalf("parsed path = %#v", got)
+	if got := strings.Join(catalog.LabIDsOnPath("cka"), ","); got != "test-scenario" {
+		t.Fatalf("cka labs = %s", got)
+	}
+	if got := strings.Join(catalog.ScenarioIDs(), ","); got != "test-scenario" {
+		t.Fatalf("unique labs = %s", got)
 	}
 }
