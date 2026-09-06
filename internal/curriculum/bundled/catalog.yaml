@@ -3,13 +3,6 @@ name: core
 title: KubeCrypt Core Scenarios
 revision: 2026-09
 modules:
-  - id: orientation
-    title: Orientation
-    scenarios:
-      - id: shell-orientation
-        path: 00-orientation/01-shell-orientation.yaml
-      - id: cluster-components
-        path: 00-orientation/02-cluster-components.yaml
   - id: foundations
     title: Foundations
     scenarios:

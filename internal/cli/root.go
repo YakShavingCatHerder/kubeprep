@@ -170,7 +170,6 @@ func (a *app) doctorCommand() *cobra.Command {
 }
 
 func (a *app) startCommand() *cobra.Command {
-	var tutorial string
 	var track string
 	var prepareOnly bool
 	command := &cobra.Command{
@@ -181,7 +180,7 @@ func (a *app) startCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if _, err := a.ensureProfile(cmd, store, tutorial, track); err != nil {
+			if _, err := a.ensureProfile(cmd, store, track); err != nil {
 				return err
 			}
 			manager, err := a.clusterManager()
@@ -209,8 +208,7 @@ func (a *app) startCommand() *cobra.Command {
 			return a.runTrainingSession(cmd.Context(), scenario, manager, store)
 		},
 	}
-	command.Flags().StringVar(&tutorial, "tutorial", "", "introductory tutorial: yes or no")
-	command.Flags().StringVar(&track, "track", "", "certification track when skipping the tutorial: cka or ckad")
+	command.Flags().StringVar(&track, "track", "", "learning track: beginner, cka, or ckad")
 	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
 	return command
 }
@@ -387,65 +385,47 @@ func (a *app) packCommand() *cobra.Command {
 	return pack
 }
 
-func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, tutorialChoice, requestedTrack string) (game.Profile, error) {
+func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, requestedTrack string) (game.Profile, error) {
 	profile, err := store.LoadProfile()
 	if err != nil {
 		return game.Profile{}, err
 	}
-	input := bufio.NewReader(cmd.InOrStdin())
-	if profile.OnboardingComplete && tutorialChoice == "" && requestedTrack == "" {
+	if profile.OnboardingComplete && requestedTrack == "" {
 		return profile, nil
 	}
 
-	if tutorialChoice == "" && requestedTrack != "" {
-		tutorialChoice = "no"
-	}
-	if tutorialChoice == "" {
+	track := strings.ToLower(strings.TrimSpace(requestedTrack))
+	if track == "" {
 		if !readerIsTerminal(cmd.InOrStdin()) {
-			return game.Profile{}, errors.New("first non-interactive start requires --tutorial=yes, or --tutorial=no with --track=cka|ckad")
+			return game.Profile{}, errors.New("first non-interactive start requires --track=beginner, --track=cka, or --track=ckad")
 		}
-		fmt.Fprint(cmd.OutOrStdout(), "Would you like the introductory tutorial? [Y/n]: ")
-		line, readErr := input.ReadString('\n')
+		fmt.Fprintln(cmd.OutOrStdout(), "Which track are you following?")
+		fmt.Fprintln(cmd.OutOrStdout(), "  1) Foundations\n  2) CKA\n  3) CKAD")
+		fmt.Fprint(cmd.OutOrStdout(), "Choose 1-3: ")
+		line, readErr := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
 		if readErr != nil && !errors.Is(readErr, io.EOF) {
-			return game.Profile{}, fmt.Errorf("read tutorial choice: %w", readErr)
+			return game.Profile{}, fmt.Errorf("read track: %w", readErr)
 		}
-		tutorialChoice = strings.TrimSpace(strings.ToLower(line))
-		if tutorialChoice == "" {
-			tutorialChoice = "yes"
+		switch strings.TrimSpace(line) {
+		case "1":
+			track = "beginner"
+		case "2":
+			track = "cka"
+		case "3":
+			track = "ckad"
+		default:
+			return game.Profile{}, errors.New("track must be 1, 2, or 3")
 		}
 	}
-
-	switch strings.ToLower(strings.TrimSpace(tutorialChoice)) {
-	case "yes", "y", "true":
-		if requestedTrack != "" {
-			return game.Profile{}, errors.New("--track cannot be used when the introductory tutorial is enabled")
-		}
+	switch track {
+	case "beginner", "foundations":
 		profile.Experience = game.ExperienceBeginner
-	case "no", "n", "false":
-		track := strings.ToLower(strings.TrimSpace(requestedTrack))
-		if track == "" {
-			if !readerIsTerminal(cmd.InOrStdin()) {
-				return game.Profile{}, errors.New("skipping the tutorial requires --track=cka or --track=ckad")
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Which certification track are you preparing for?")
-			fmt.Fprintln(cmd.OutOrStdout(), "  1) CKA\n  2) CKAD")
-			fmt.Fprint(cmd.OutOrStdout(), "Choose 1-2: ")
-			line, readErr := input.ReadString('\n')
-			if readErr != nil && !errors.Is(readErr, io.EOF) {
-				return game.Profile{}, fmt.Errorf("read certification track: %w", readErr)
-			}
-			switch strings.TrimSpace(line) {
-			case "1":
-				track = "cka"
-			case "2":
-				track = "ckad"
-			default:
-				return game.Profile{}, errors.New("certification track must be 1 or 2")
-			}
-		}
-		profile.Experience = game.Experience(track)
+	case "cka":
+		profile.Experience = game.ExperienceCKACandidate
+	case "ckad":
+		profile.Experience = game.ExperienceCKADCandidate
 	default:
-		return game.Profile{}, errors.New("tutorial choice must be yes or no")
+		return game.Profile{}, errors.New("--track must be beginner, cka, or ckad")
 	}
 	if err := profile.Experience.Validate(); err != nil {
 		return game.Profile{}, err

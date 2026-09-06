@@ -7,7 +7,7 @@ import (
 
 const stateVersion = 1
 
-// Experience identifies the learner's selected tutorial or certification route.
+// Experience identifies the learner's selected learning or certification route.
 type Experience string
 
 const (

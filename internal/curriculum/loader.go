@@ -240,17 +240,52 @@ func loadFS(fsys fs.FS, filename, displayName string) (*Scenario, error) {
 		return nil, fmt.Errorf("load scenario %q: %w", displayName, err)
 	}
 	defer file.Close()
-	var scenario Scenario
-	if err := decodeOne(file, &scenario); err != nil {
+	document, err := decodeDocument(file, displayName)
+	if err != nil {
+		return nil, err
+	}
+	if err := Validate(&document.Scenario); err != nil {
+		return nil, fmt.Errorf("validate scenario %q: %w", displayName, err)
+	}
+	if start := strings.TrimSpace(document.StartingClusterConfiguration); start != "" {
+		if err := validateManifestSafety("startingClusterConfiguration", []byte(start)); err != nil {
+			return nil, fmt.Errorf("validate scenario %q: %w", displayName, err)
+		}
+	}
+	if err := verifyManifestFiles(fsys, path.Dir(filename), document.Setup.Manifests, document.Reset.Manifests); err != nil {
+		return nil, fmt.Errorf("validate scenario %q: %w", displayName, err)
+	}
+	scenario := document.Scenario
+	return &scenario, nil
+}
+
+// LoadDocument strictly decodes one scenario file, including authoring notes.
+func LoadDocument(filename string) (*Document, error) {
+	clean := filepath.Clean(filename)
+	if clean == "." {
+		return nil, fmt.Errorf("load scenario %q: invalid filename", filename)
+	}
+	file, err := os.Open(clean)
+	if err != nil {
+		return nil, fmt.Errorf("load scenario %q: %w", filename, err)
+	}
+	defer file.Close()
+	document, err := decodeDocument(file, filename)
+	if err != nil {
+		return nil, err
+	}
+	if err := Validate(&document.Scenario); err != nil {
+		return nil, fmt.Errorf("validate scenario %q: %w", filename, err)
+	}
+	return document, nil
+}
+
+func decodeDocument(reader io.Reader, displayName string) (*Document, error) {
+	var document Document
+	if err := decodeOne(reader, &document); err != nil {
 		return nil, fmt.Errorf("decode scenario %q: %w", displayName, err)
 	}
-	if err := Validate(&scenario); err != nil {
-		return nil, fmt.Errorf("validate scenario %q: %w", displayName, err)
-	}
-	if err := verifyManifestFiles(fsys, path.Dir(filename), scenario.Setup.Manifests, scenario.Reset.Manifests); err != nil {
-		return nil, fmt.Errorf("validate scenario %q: %w", displayName, err)
-	}
-	return &scenario, nil
+	return &document, nil
 }
 
 func decodeOne(reader io.Reader, target any) error {

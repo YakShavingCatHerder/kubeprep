@@ -21,6 +21,9 @@ func (s *Scenario) ComposeResources(resources ResourceSet, read func(string) ([]
 	if name := strings.TrimSpace(s.Namespace); name != "" {
 		documents = append(documents, NamespaceDocument(name))
 	}
+	if start := strings.TrimSpace(s.StartingClusterConfiguration); start != "" {
+		documents = append(documents, []byte(start))
+	}
 	for _, reference := range resources.Manifests {
 		if read == nil {
 			return nil, fmt.Errorf("read scenario manifest %q: reader is nil", reference)

@@ -7,10 +7,8 @@ state—not the commands used to reach it.
 
 The bundled starter pack contains:
 
-1. **Shell Orientation** — use the permanent split view: scenario on one side,
-   a real Lab Shell on the other.
-2. **Cluster Components** — inspect nodes, namespaces, control-plane Pods,
-   CoreDNS, kube-proxy, and the CNI.
+1. **Create a Pod** — submit a Pod to the API server and confirm the stored
+   object in the isolated training cluster.
 
 Additional scenario packs can be loaded from local directories without
 recompiling KubeCrypt.
@@ -57,15 +55,9 @@ prefix. If that directory is not already on your `PATH`, the install target
 prints the `export PATH=...` line to add.
 
 `start` creates an isolated three-node `kubecrypt` cluster if needed and opens
-the current lab. On first start it asks whether you want the introductory
-tutorial:
-
-- **Yes** starts with shell orientation.
-- **No** asks whether you are following the CKA or CKAD track and skips
-  tutorial-only scenarios.
-
-For scripts, use `--tutorial=yes` or
-`--tutorial=no --track=cka|ckad`.
+the current lab. On first start it asks which track you are following
+(Foundations, CKA, or CKAD). For scripts, pass `--track=beginner`,
+`--track=cka`, or `--track=ckad`.
 
 `start` opens a permanent split view: the scenario stays on screen
 while a real Lab Shell runs in the other pane with a session-only `KUBECONFIG`.

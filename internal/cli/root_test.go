@@ -91,7 +91,7 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "shell-orientation" {
+	if scenario.ID != "pod-creation" {
 		t.Fatalf("first scenario = %q", scenario.ID)
 	}
 	if err := store.CompleteScenario(scenario.ID); err != nil {
@@ -101,10 +101,10 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "cluster-components" {
-		t.Fatalf("second scenario = %q", scenario.ID)
+	if scenario.ID != "pod-creation" {
+		t.Fatalf("completed catalog still resumes %q", scenario.ID)
 	}
-	if err := store.CompleteScenario(scenario.ID); err != nil {
+	if err := store.SelectScenario("pod-creation"); err != nil {
 		t.Fatal(err)
 	}
 	scenario, err = currentScenario(store, registry)
@@ -112,16 +112,6 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 		t.Fatal(err)
 	}
 	if scenario.ID != "pod-creation" {
-		t.Fatalf("third scenario = %q", scenario.ID)
-	}
-	if err := store.SelectScenario("shell-orientation"); err != nil {
-		t.Fatal(err)
-	}
-	scenario, err = currentScenario(store, registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if scenario.ID != "shell-orientation" {
 		t.Fatalf("selected scenario = %q", scenario.ID)
 	}
 }
@@ -142,7 +132,7 @@ func TestShouldWipeLabWorkspace(t *testing.T) {
 		want     bool
 	}{
 		{current: "", entering: "pod-creation", want: true},
-		{current: "shell-orientation", entering: "pod-creation", want: true},
+		{current: "other-lab", entering: "pod-creation", want: true},
 		{current: "pod-creation", entering: "pod-creation", want: false},
 	}
 	for _, test := range tests {
@@ -161,27 +151,17 @@ func TestFollowingIncompleteScenario(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	next, err := followingIncompleteScenario(store, registry, "shell-orientation")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if next == nil || next.ID != "cluster-components" {
-		t.Fatalf("following scenario = %v", next)
-	}
-	if err := store.CompleteScenario("cluster-components"); err != nil {
-		t.Fatal(err)
-	}
-	next, err = followingIncompleteScenario(store, registry, "shell-orientation")
+	next, err := followingIncompleteScenario(store, registry, "")
 	if err != nil {
 		t.Fatal(err)
 	}
 	if next == nil || next.ID != "pod-creation" {
-		t.Fatalf("following scenario after cluster-components = %v", next)
+		t.Fatalf("following scenario = %v", next)
 	}
 	if err := store.CompleteScenario("pod-creation"); err != nil {
 		t.Fatal(err)
 	}
-	next, err = followingIncompleteScenario(store, registry, "shell-orientation")
+	next, err = followingIncompleteScenario(store, registry, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -209,12 +189,12 @@ func TestCurrentScenarioSkipsTutorialForCertificationTrack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "cluster-components" {
-		t.Fatalf("first CKA scenario = %q, want cluster-components", scenario.ID)
+	if scenario.ID != "pod-creation" {
+		t.Fatalf("first CKA scenario = %q, want pod-creation", scenario.ID)
 	}
 }
 
-func TestEnsureProfileRequiresTutorialChoiceWhenNonInteractive(t *testing.T) {
+func TestEnsureProfileRequiresTrackWhenNonInteractive(t *testing.T) {
 	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)
@@ -224,12 +204,12 @@ func TestEnsureProfileRequiresTutorialChoiceWhenNonInteractive(t *testing.T) {
 	cmd.SetIn(strings.NewReader(""))
 	cmd.SetOut(&bytes.Buffer{})
 
-	if _, err := a.ensureProfile(cmd, store, "", ""); err == nil || !strings.Contains(err.Error(), "--tutorial") {
+	if _, err := a.ensureProfile(cmd, store, ""); err == nil || !strings.Contains(err.Error(), "--track") {
 		t.Fatalf("ensureProfile() error = %v", err)
 	}
 }
 
-func TestEnsureProfileAcceptsExplicitTutorial(t *testing.T) {
+func TestEnsureProfileAcceptsBeginnerTrack(t *testing.T) {
 	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)
@@ -239,7 +219,7 @@ func TestEnsureProfileAcceptsExplicitTutorial(t *testing.T) {
 	cmd.SetIn(strings.NewReader(""))
 	cmd.SetOut(&bytes.Buffer{})
 
-	profile, err := a.ensureProfile(cmd, store, "yes", "")
+	profile, err := a.ensureProfile(cmd, store, "beginner")
 	if err != nil {
 		t.Fatalf("ensureProfile(): %v", err)
 	}
@@ -248,7 +228,7 @@ func TestEnsureProfileAcceptsExplicitTutorial(t *testing.T) {
 	}
 }
 
-func TestEnsureProfileAcceptsSkippedTutorialTrack(t *testing.T) {
+func TestEnsureProfileAcceptsCertificationTrack(t *testing.T) {
 	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)
@@ -258,7 +238,7 @@ func TestEnsureProfileAcceptsSkippedTutorialTrack(t *testing.T) {
 	cmd.SetIn(strings.NewReader(""))
 	cmd.SetOut(&bytes.Buffer{})
 
-	profile, err := a.ensureProfile(cmd, store, "no", "ckad")
+	profile, err := a.ensureProfile(cmd, store, "ckad")
 	if err != nil {
 		t.Fatalf("ensureProfile(): %v", err)
 	}

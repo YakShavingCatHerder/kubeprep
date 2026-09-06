@@ -35,15 +35,15 @@ func TestValidateCatalogRequiresNumberedLabPaths(t *testing.T) {
 			name: "modules listed out of slot order",
 			mutate: func(c *Catalog) {
 				c.Modules = []Module{
+					{ID: "workloads", Title: "Workloads", Scenarios: []ScenarioRef{
+						{ID: "later-lab", Path: "02-workloads/01-later-lab.yaml"},
+					}},
 					{ID: "foundations", Title: "Foundations", Scenarios: []ScenarioRef{
 						{ID: "pod-creation", Path: "01-foundations/01-pod-creation.yaml"},
 					}},
-					{ID: "orientation", Title: "Orientation", Scenarios: []ScenarioRef{
-						{ID: "shell-orientation", Path: "00-orientation/01-shell-orientation.yaml"},
-					}},
 				}
 			},
-			want: "must come after slot 01",
+			want: "must come after slot 02",
 		},
 		{
 			name: "second lab not numbered 02",
