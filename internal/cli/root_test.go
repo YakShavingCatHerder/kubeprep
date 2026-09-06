@@ -110,6 +110,15 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	}
 }
 
+func TestPinLabWorkspaceUsesDeclaredOrDefault(t *testing.T) {
+	if got := contextNamespaceForLab(&curriculum.Scenario{Namespace: "kubecrypt-foundations"}); got != "kubecrypt-foundations" {
+		t.Fatalf("declared namespace = %q", got)
+	}
+	if got := contextNamespaceForLab(&curriculum.Scenario{}); got != "default" {
+		t.Fatalf("empty namespace = %q, want default", got)
+	}
+}
+
 func TestShouldWipeLabWorkspace(t *testing.T) {
 	tests := []struct {
 		current  string
