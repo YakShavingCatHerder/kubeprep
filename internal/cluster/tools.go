@@ -67,6 +67,23 @@ func EnsureTools(ctx context.Context, paths Paths, opts ToolOptions) error {
 	return ensureBinary(ctx, paths.KubectlBinary(), kubectl, opts)
 }
 
+// RequireTools reports whether the pinned kind and kubectl binaries are already
+// installed. It does not download anything.
+func RequireTools(paths Paths) error {
+	for _, tool := range []struct {
+		name string
+		path string
+	}{
+		{name: "kind", path: paths.KindBinary()},
+		{name: "kubectl", path: paths.KubectlBinary()},
+	} {
+		if !fileExists(tool.path) {
+			return fmt.Errorf("%s is not installed; run `kubecrypt doctor`", tool.name)
+		}
+	}
+	return nil
+}
+
 func resolveArtifacts(opts ToolOptions) (Artifact, Artifact, error) {
 	if opts.Kind != nil && opts.Kubectl != nil {
 		return *opts.Kind, *opts.Kubectl, nil

@@ -24,8 +24,15 @@ func TestDoctorChecksExpectedCommandsAndWritableDirectory(t *testing.T) {
 		t.Fatalf("Check() returned %d results, want 5", len(results))
 	}
 	for _, result := range results {
-		if !result.OK {
-			t.Errorf("%s failed: %s", result.Name, result.Detail)
+		switch result.Name {
+		case "kind", "kubectl":
+			if result.OK {
+				t.Errorf("%s passed without a managed binary: %#v", result.Name, result)
+			}
+		default:
+			if !result.OK {
+				t.Errorf("%s failed: %s", result.Name, result.Detail)
+			}
 		}
 	}
 }
@@ -59,7 +66,7 @@ func TestDoctorReportsPendingToolInstall(t *testing.T) {
 	}}
 	results := (&Doctor{Runner: runner, Paths: paths, GOOS: "linux"}).Check(context.Background())
 	kind := results[2]
-	if !kind.OK || !strings.Contains(kind.Detail, KindVersion) {
+	if kind.OK || !strings.Contains(kind.Detail, KindVersion) || !strings.Contains(kind.Remediation, "kubecrypt doctor") {
 		t.Fatalf("kind check = %#v", kind)
 	}
 }

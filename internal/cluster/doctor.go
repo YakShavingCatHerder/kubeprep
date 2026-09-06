@@ -85,9 +85,9 @@ func checkCommand(ctx context.Context, runner Runner, name string, command Comma
 func (d *Doctor) checkManagedTool(ctx context.Context, runner Runner, name, version, path string) CheckResult {
 	if !fileExists(path) {
 		return CheckResult{
-			Name:   name,
-			OK:     true,
-			Detail: fmt.Sprintf("not installed yet; start will download %s %s", name, version),
+			Name:        name,
+			Detail:      fmt.Sprintf("%s %s is not installed", name, version),
+			Remediation: fmt.Sprintf("Run `kubecrypt doctor` to install %s %s.", name, version),
 		}
 	}
 	args := []string{"version"}
@@ -95,10 +95,10 @@ func (d *Doctor) checkManagedTool(ctx context.Context, runner Runner, name, vers
 		args = []string{"version", "--client"}
 	}
 	result := checkCommand(ctx, runner, name, Command{Name: path, Args: args},
-		fmt.Sprintf("Remove %q and run `kubecrypt start` to reinstall %s %s.", path, name, version))
+		fmt.Sprintf("Remove %q and run `kubecrypt doctor` to reinstall %s %s.", path, name, version))
 	if result.OK && !strings.Contains(result.Detail, version) {
 		result.OK = false
-		result.Remediation = fmt.Sprintf("Remove %q and run `kubecrypt start` to install %s %s.", path, name, version)
+		result.Remediation = fmt.Sprintf("Remove %q and run `kubecrypt doctor` to install %s %s.", path, name, version)
 	}
 	return result
 }

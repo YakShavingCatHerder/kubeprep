@@ -123,12 +123,12 @@ func (a *app) registry() (*curriculum.Registry, error) {
 	return curriculum.NewRegistry(a.packDirs...)
 }
 
-func (a *app) clusterManager(ctx context.Context) (*cluster.Manager, error) {
+func (a *app) clusterManager() (*cluster.Manager, error) {
 	manager, err := cluster.NewManager(cluster.ExecRunner{})
 	if err != nil {
 		return nil, err
 	}
-	if err := cluster.EnsureTools(ctx, manager.Paths(), cluster.DefaultToolOptions()); err != nil {
+	if err := cluster.RequireTools(manager.Paths()); err != nil {
 		return nil, err
 	}
 	return manager, nil
@@ -137,10 +137,14 @@ func (a *app) clusterManager(ctx context.Context) (*cluster.Manager, error) {
 func (a *app) doctorCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Check local prerequisites",
+		Short: "Install pinned kind and kubectl, then check prerequisites",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			doctor, err := cluster.NewDoctor(cluster.ExecRunner{})
 			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.ErrOrStderr(), "Installing pinned kind and kubectl...")
+			if err := cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions()); err != nil {
 				return err
 			}
 			failed := false
@@ -178,8 +182,7 @@ func (a *app) startCommand() *cobra.Command {
 			if _, err := a.ensureProfile(cmd, store, tutorial, track); err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.ErrOrStderr(), "Ensuring pinned kind and kubectl...")
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
@@ -262,7 +265,7 @@ func (a *app) statusCommand() *cobra.Command {
 					}
 				}
 			}
-			manager, managerErr := a.clusterManager(cmd.Context())
+			manager, managerErr := a.clusterManager()
 			if managerErr == nil {
 				_, managerErr = manager.VerifyOwnership(cmd.Context())
 			}
@@ -298,7 +301,7 @@ func (a *app) resetCommand() *cobra.Command {
 			if err := a.confirm(cmd, force, fmt.Sprintf("Reset %s to its starting state?", scenario.Title)); err != nil {
 				return err
 			}
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
@@ -333,7 +336,7 @@ func (a *app) destroyCommand() *cobra.Command {
 			if err := a.confirm(cmd, force, prompt); err != nil {
 				return err
 			}
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
