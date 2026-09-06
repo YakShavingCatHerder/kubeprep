@@ -13,7 +13,7 @@ Your work can ship to every learner. A merged core module is bundled into the
 
 KubeCrypt is early, and the bundled curriculum is still growing on purpose.
 **v0.1** is the framework release: doctor, start, the split Lab Shell, and the
-orientation labs. Each official release after that adds a chapter of real
+first beginner lab. Each official release after that adds a chapter of real
 practice.
 
 When a pull request is reviewed and merged into `curriculum/`, it is core
@@ -25,40 +25,26 @@ That is the difference from `--pack`: local packs are perfect for drafting,
 classrooms, and personal content, and they work the same day. Core publication
 is how a lab becomes the shared CKA/CKAD path.
 
-We merge in catalog order when we can. Careful labs in `01-foundations` and
-`02-workloads` help the most right now. One well-taught scenario is more useful
+We merge in catalog order when we can. Careful labs in `pods` and other early
+sections help the most right now. One well-taught scenario is more useful
 than an unfinished chapter. First-time authors are welcome; review exists so
 bundled YAML stays trusted.
 
-## 1. Start with the questionnaire
+## 1. Start with the lab file
 
-Copy [`example-module.yaml`](example-module.yaml) and fill it in. That file is
-the design brief: what you are teaching, the broken starting state, the done
-condition, hints, and the debrief.
+Copy [`example-module.yaml`](example-module.yaml) and fill it in. `authoring:`
+holds notes for humans and agents (intent, section, guidance, desired YAML,
+accept/reject). The rest of the file is the loadable Scenario: start YAML,
+checks, hints, completion, and debrief. The runner grades `checks` only and
+never applies `desiredClusterConfiguration`.
 
-Pick a **slot** so the lab sits in the right chapter and the right release:
+Set `authoring.section` to the domain folder (`pods`, `scheduling`, `rbac`).
+Set `module:` to that same section id. Learner playlists (`beginner`, `cka`,
+`ckad`) live in `catalog.yaml`, not in the lab file. A lab is one file and can
+appear on more than one path.
 
-| Slot | Teaches | Official release |
-| --- | --- | --- |
-| `00-orientation` | Lab shell, kubeconfig, cluster components | v0.1 — in tree now |
-| `01-foundations` | kubectl, contexts, namespaces, API resources, YAML | Next after v0.1 |
-| `02-workloads` | Pods, Jobs, CronJobs, Deployments, DaemonSets, StatefulSets | v0.2 |
-| `03-scheduling` | Labels, selectors, taints, tolerations, affinity, resources | v0.3 |
-| `04-storage` | PVs, PVCs, StorageClasses, reclaim behavior | v0.4 |
-| `05-networking` | Services, EndpointSlices, DNS, NetworkPolicy, ingress | v0.5 |
-| `06-cluster-admin` | RBAC, ServiceAccounts, Helm, Kustomize, CRDs | v0.6 |
-| `07-troubleshooting` | Mixed-domain failures, less guidance | v0.7 |
-
-Exam mode is v1.0. It is not a numbered slot; later mixed labs feed it.
-
-From the slot we infer module id, catalog order, domain, tracks, Kubernetes
-1.35, namespace `kubecrypt-<id>`, and shrinking guidance (first lab more
-helped, last lab more independent). Use `overrides` in the questionnaire only
-when those defaults are wrong.
-
-`00-orientation` is observe-only. Other slots are challenges: setup applies a
-broken or incomplete state, and reset restores that same start—not a healthy
-cluster.
+Labs are challenges: setup applies a broken or incomplete state, and reset
+restores that same start—not a healthy cluster.
 
 ## 2. Choose how you want to ship it
 
@@ -71,17 +57,17 @@ kubecrypt --pack ./my-pack start
 ```
 
 **Publish into core** when the module should ship in the next official
-release. Canonical files live under `curriculum/<slot>/`. The binary embeds a
+release. Canonical files live under `curriculum/<section>/`. The binary embeds a
 copy from `internal/curriculum/bundled/`, and tests require those two trees to
-match byte-for-byte. After you edit `curriculum/`, register the lab in
-`curriculum/catalog.yaml` and sync the embedded copy:
+match byte-for-byte. After you edit `curriculum/`, register the lab id under
+the right path and section in `curriculum/catalog.yaml` and sync:
 
 ```sh
-make bundle-lesson 01-foundations/01-pod-creation
+make bundle-lesson pods/pod-creation
 ```
 
-That command fails if the catalog has no matching `path:` entry. When the
-catalog lists the lab, it copies both the scenario file and `catalog.yaml`.
+That command fails if the catalog has no matching lab id. When the catalog
+lists the lab, it copies both the scenario file and `catalog.yaml`.
 
 | | Local pack | Published in core |
 | --- | --- | --- |
@@ -95,22 +81,28 @@ Do not add this `contribute/` directory to a catalog.
 
 ## 3. Register the labs
 
-Module `id` is the slot without the number (`01-foundations` → `foundations`).
-Each scenario `id` and `path` must match the file, and `module:` inside the
-scenario must match the catalog module id. Lab files are numbered inside the
-slot so play order is visible: `01-foundations/01-pod-creation.yaml` is always
-the first foundations lab. Catalog list order must match those numbers.
+The catalog is a nested playlist. Lab files are `{section}/{id}.yaml` with no
+numbers. List order under a path is play order. The same id may appear on
+more than one path; it is still one file.
 
 ```yaml
-  - id: foundations
-    title: Foundations
-    scenarios:
-      - id: inspect-namespace
-        path: 01-foundations/01-inspect-namespace.yaml
+paths:
+  - id: beginner
+    title: Beginner
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
+  - id: cka
+    title: CKA
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
 ```
 
-Use the same shape in a local pack’s `catalog.yaml`, with paths relative to
-that pack.
+`module:` inside the scenario must match the section id (`pods`). Use the same
+catalog shape in a local pack.
 
 ## 4. What a strong lab looks like
 
@@ -134,5 +126,5 @@ broken, the target is accepted, and reset restores the start—plus one
 alternate valid fix when you can.
 
 Open a pull request when you are ready. After review and merge, the work is
-queued for the next official release that covers that slot. Questions and
-first-time modules are welcome.
+queued for the next official release that covers that section. Questions and
+first-time labs are welcome.

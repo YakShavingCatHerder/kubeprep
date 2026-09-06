@@ -1,46 +1,105 @@
-# Fill this, then author curriculum/<slot>/ (or a local pack) from it.
-# Slot infers: module id, catalog order, domain, prior skills, tracks,
-# k8s 1.35, kind, namespace kubecrypt-<id>, challenge mode, shrinking guidance.
-# Grade cluster state, never commands. Reset reapplies brokenStart.
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
 
-slot: 01-foundations # 00-orientation … 07-troubleshooting
+authoring:
+  # Domain folder and catalog section: api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section:
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance:
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach:
+    # The misconception the lab should break.
+    wrongIdea:
+    # Accurate mechanism in one or two sentences.
+    mentalModel:
+    # Why this lab sits here on the playlist.
+    why:
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes:
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    -
+    -
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    -
+    -
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate:
 
-# What is this module for?
-teach: ""        # operational skill the learner should leave with
-wrongIdea: ""    # misconception to correct
-mentalModel: ""  # how Kubernetes actually behaves (for the debrief)
-revisitLater: "" # later lab that re-tests this without naming the concept
-
-# One block per scenario, numbered file order. Copy the block to add a lab.
-# Path in curriculum/ is {slot}/{nn}-{id}.yaml (01 is the first lab).
-# First lab is more guided; last is less. Hints: conceptual → procedural → explicit.
-labs:
-  - id: ""
-    title: ""
-    guidance: ""       # guided | assisted | operator (blank = infer from order)
-    why: ""            # why this lab sits here in the sequence
-    object: ""         # kind/name (namespace defaults to kubecrypt-<id>)
-    brokenStart: ""    # the incomplete/broken cluster state we apply
-    doneWhen: ""       # observable target state
-    checks:            # runner today: objectExists, fieldEquals, deploymentAvailable, podReady, containersHealthy, nodeTopology
-      - type: ""
-        name: ""
-    accept:            # legitimate workflows that must all pass
-      - ""             # e.g. scale, edit, patch, apply
-    reject:            # shortcuts that must still fail
-      - ""             # e.g. fixing a different namespace; creating Pods by hand
-    hints:
-      - ""             # 1 conceptual: what kind of fact matters
-      - ""             # 2 procedural: what to inspect
-      - ""             # 3 explicit: a concrete command or next step
-    debrief: ""        # real mechanism, object names, no pep talk
-    remember:          # shown after success; never required to succeed
-      - ""
-    difficulty: 1      # 1–5
-    proveAlternate: "" # second valid fix the encounter test should accept
-
-# Leave empty unless slot defaults are wrong.
-overrides:
-  tracks: []           # beginner, cka, ckad
-  namespace: ""
-  extraCapability: ""  # e.g. network-policy, dynamic-storage
+apiVersion: kubecrypt.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id:
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title:
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module:
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs (kebab-case), e.g. multi-node, storage.
+requires:
+  -
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+  - cka
+  - ckad
+# Workspace Namespace. Must be kubecrypt-*. Created on start; wiped and recreated on reset.
+namespace:
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: ""
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+description: |
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+# kebab-case tags for mastery tracking.
+concepts:
+  -
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Implemented types include objectExists, fieldEquals, podReady, deploymentAvailable, containersHealthy, nodeTopology.
+checks:
+  - type:
+    kind:
+    namespace:
+    name:
+  - type:
+    kind:
+    namespace:
+    name:
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  -
+  -
+  -
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  explanation: |
+  # Commands worth remembering after success.
+  commands:
+    -
+    -
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    -
+    -
+  # One-line domain label.
+  domain:
