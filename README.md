@@ -20,11 +20,9 @@ recompiling KubeCrypt.
 - macOS or Linux (amd64 or arm64)
 - Docker (or a Docker-compatible runtime usable by `kind`)
 
-`kind` and `kubectl` are installed by `kubecrypt setup` into the KubeCrypt
+`kind` and `kubectl` are installed by `kubecrypt doctor` into the KubeCrypt
 config directory (pinned to Kubernetes 1.35). You do not need to install them
 yourself.
-
-Run `kubecrypt doctor` for actionable prerequisite checks.
 
 ## Install
 
@@ -40,7 +38,7 @@ sudo mv kubecrypt /usr/local/bin/
 kubecrypt --version
 ```
 
-You still need Docker (or a compatible daemon) running. `kubecrypt setup`
+You still need Docker (or a compatible daemon) running. `kubecrypt doctor`
 installs pinned `kind` and `kubectl` into the KubeCrypt config directory.
 
 ## Build and set up
@@ -50,7 +48,7 @@ From source (Go 1.27 or newer; matches CI `gofmt`):
 ```sh
 make install
 kubecrypt doctor
-kubecrypt setup
+kubecrypt start
 ```
 
 `make build` writes `./bin/kubecrypt`. `make install` copies that binary into
@@ -58,9 +56,9 @@ kubecrypt setup
 prefix. If that directory is not already on your `PATH`, the install target
 prints the `export PATH=...` line to add.
 
-`setup` creates an isolated three-node `kubecrypt` cluster and opens the first
-incomplete scenario in the active catalogs. On first setup it
-asks whether you want the introductory tutorial:
+`start` creates an isolated three-node `kubecrypt` cluster if needed and opens
+the current lab. On first start it asks whether you want the introductory
+tutorial:
 
 - **Yes** starts with shell orientation.
 - **No** asks whether you are following the CKA or CKAD track and skips
@@ -69,7 +67,7 @@ asks whether you want the introductory tutorial:
 For scripts, use `--tutorial=yes` or
 `--tutorial=no --track=cka|ckad`.
 
-`setup` and `resume` open a permanent split view: the scenario stays on screen
+`start` opens a permanent split view: the scenario stays on screen
 while a real Lab Shell runs in the other pane with a session-only `KUBECONFIG`.
 Press `?` or `F1` for a hint, `F2` to validate cluster state, `F11` to zoom the
 shell, and `F10` to leave. After a scenario is completed you are asked whether
@@ -80,24 +78,19 @@ by the editor; use `?`.
 Useful commands:
 
 ```sh
-kubecrypt resume
+kubecrypt
+kubecrypt start
 kubecrypt status
-kubecrypt objective
-kubecrypt hint
-kubecrypt check
 kubecrypt reset
-kubecrypt reset cluster-components
-kubecrypt reset --all
 kubecrypt destroy
-kubecrypt --pack ./my-pack resume
-kubecrypt pack validate ./my-pack
+kubecrypt destroy --all
+kubecrypt --pack ./my-pack start
 ```
 
-`kubecrypt reset` clears the learner profile and scenario progress while
-retaining the verified cluster. `kubecrypt reset <scenario>` restores one
-scenario and selects it for replay. `kubecrypt reset --all` destroys the
-verified cluster and clears learner data. Destructive resets require
-confirmation; scripts must pass `--force`.
+`kubecrypt` with no arguments prints help. `reset` restores the current lab
+only. `destroy` removes the cluster and keeps progress; `destroy --all` also
+clears learner data. Destructive commands require confirmation; scripts must
+pass `--force`.
 
 ## Safety model
 
@@ -114,7 +107,7 @@ Kubernetes manifests. New modules should start from
 [`contribute/`](contribute/). Validate a pack before using or contributing it:
 
 ```sh
-kubecrypt pack validate path/to/pack
+make validate-pack PACK=path/to/pack
 ```
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).

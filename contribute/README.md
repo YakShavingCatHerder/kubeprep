@@ -7,12 +7,12 @@ split view with a real shell. We grade the resulting cluster state—not the
 commands they typed—so every legitimate `kubectl` path can succeed.
 
 Your work can ship to every learner. A merged core module is bundled into the
-**next official KubeCrypt release** and becomes part of `kubecrypt setup`.
+**next official KubeCrypt release** and becomes part of `kubecrypt start`.
 
 ## Land in the next official release
 
 KubeCrypt is early, and the bundled curriculum is still growing on purpose.
-**v0.1** is the framework release: doctor, setup, the split Lab Shell, and the
+**v0.1** is the framework release: doctor, start, the split Lab Shell, and the
 orientation labs. Each official release after that adds a chapter of real
 practice.
 
@@ -66,8 +66,8 @@ cluster.
 scenario files, and manifests. Nothing is compiled in.
 
 ```sh
-kubecrypt pack validate ./my-pack
-kubecrypt --pack ./my-pack resume
+make validate-pack PACK=./my-pack
+kubecrypt --pack ./my-pack start
 ```
 
 **Publish into core** when the module should ship in the next official
@@ -85,10 +85,10 @@ catalog lists the lab, it copies both the scenario file and `catalog.yaml`.
 
 | | Local pack | Published in core |
 | --- | --- | --- |
-| Learners get it | `kubecrypt --pack ./my-pack resume` | Next official `kubecrypt` release |
+| Learners get it | `kubecrypt --pack ./my-pack start` | Next official `kubecrypt` release |
 | Catalog | `my-pack/catalog.yaml` | `curriculum/catalog.yaml` |
 | Mirror the files | No | Yes — `internal/curriculum/bundled/` |
-| Validate | `kubecrypt pack validate ./my-pack` | `kubecrypt pack validate curriculum` |
+| Validate | `make validate-pack PACK=./my-pack` | `make validate-pack` |
 
 Scenario IDs must be unique across the bundled pack and any `--pack` you load.
 Do not add this `contribute/` directory to a catalog.

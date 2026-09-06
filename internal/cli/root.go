@@ -48,8 +48,12 @@ func (a *app) rootCommand() *cobra.Command {
 		Use:           "kubecrypt",
 		Short:         "Run Kubernetes certification training scenarios",
 		Version:       Version,
+		Args:          cobra.NoArgs,
 		SilenceUsage:  true,
 		SilenceErrors: true,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
 	}
 	root.SetVersionTemplate("{{printf \"kubecrypt %s\\n\" .Version}}")
 	root.SetIn(a.in)
@@ -57,30 +61,76 @@ func (a *app) rootCommand() *cobra.Command {
 	root.SetErr(a.err)
 	root.AddCommand(
 		a.doctorCommand(),
-		a.setupCommand(),
-		a.resumeCommand(),
+		a.startCommand(),
 		a.statusCommand(),
 		a.resetCommand(),
 		a.destroyCommand(),
-		a.objectiveCommand(),
-		a.hintCommand(),
-		a.checkCommand(),
 		a.packCommand(),
 	)
 	root.PersistentFlags().StringSliceVar(&a.packDirs, "pack", append([]string(nil), a.packDirs...), "load an additional local scenario pack directory")
+	root.CompletionOptions.HiddenDefaultCmd = true
+	root.SetHelpCommand(&cobra.Command{
+		Use:    "help [command]",
+		Short:  "Help about any command",
+		Hidden: true,
+		Args:   cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			target, _, err := cmd.Root().Find(args)
+			if err != nil {
+				return err
+			}
+			return target.Help()
+		},
+	})
+	root.SetUsageTemplate(learnerUsageTemplate)
 	return root
 }
+
+// learnerUsageTemplate is Cobra's default usage text without the special-case
+// that always lists a command named "help". Root usage is a single line
+// (`kubecrypt [command] [flags]`) instead of separate flag and command lines.
+const learnerUsageTemplate = `Usage:{{if and .Runnable .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{if .HasAvailableFlags}} [flags]{{end}}{{else if .Runnable}}
+  {{.UseLine}}{{else if .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
+
+Aliases:
+  {{.NameAndAliases}}{{end}}{{if .HasExample}}
+
+Examples:
+{{.Example}}{{end}}{{if .HasAvailableSubCommands}}{{$cmds := .Commands}}{{if eq (len .Groups) 0}}
+
+Available Commands:{{range $cmds}}{{if .IsAvailableCommand}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{else}}{{range $group := .Groups}}
+
+{{.Title}}{{range $cmds}}{{if (and (eq .GroupID $group.ID) .IsAvailableCommand)}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{if not .AllChildCommandsHaveGroup}}
+
+Additional Commands:{{range $cmds}}{{if (and (eq .GroupID "") .IsAvailableCommand)}}
+  {{rpad .Name .NamePadding }} {{.Short}}{{end}}{{end}}{{end}}{{end}}{{end}}{{if .HasAvailableLocalFlags}}
+
+Flags:
+{{.LocalFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasAvailableInheritedFlags}}
+
+Global Flags:
+{{.InheritedFlags.FlagUsages | trimTrailingWhitespaces}}{{end}}{{if .HasHelpSubCommands}}
+
+Additional help topics:{{range .Commands}}{{if .IsAdditionalHelpTopicCommand}}
+  {{rpad .CommandPath .CommandPathPadding}} {{.Short}}{{end}}{{end}}{{end}}{{if .HasAvailableSubCommands}}
+
+Use "{{.CommandPath}} [command] --help" for more information about a command.{{end}}
+`
 
 func (a *app) registry() (*curriculum.Registry, error) {
 	return curriculum.NewRegistry(a.packDirs...)
 }
 
-func (a *app) clusterManager(ctx context.Context) (*cluster.Manager, error) {
+func (a *app) clusterManager() (*cluster.Manager, error) {
 	manager, err := cluster.NewManager(cluster.ExecRunner{})
 	if err != nil {
 		return nil, err
 	}
-	if err := cluster.EnsureTools(ctx, manager.Paths(), cluster.DefaultToolOptions()); err != nil {
+	if err := cluster.RequireTools(manager.Paths()); err != nil {
 		return nil, err
 	}
 	return manager, nil
@@ -89,10 +139,14 @@ func (a *app) clusterManager(ctx context.Context) (*cluster.Manager, error) {
 func (a *app) doctorCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
-		Short: "Check local prerequisites",
+		Short: "Install pinned kind and kubectl, then check prerequisites",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			doctor, err := cluster.NewDoctor(cluster.ExecRunner{})
 			if err != nil {
+				return err
+			}
+			fmt.Fprintln(cmd.ErrOrStderr(), "Installing pinned kind and kubectl...")
+			if err := cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions()); err != nil {
 				return err
 			}
 			failed := false
@@ -115,13 +169,13 @@ func (a *app) doctorCommand() *cobra.Command {
 	}
 }
 
-func (a *app) setupCommand() *cobra.Command {
+func (a *app) startCommand() *cobra.Command {
 	var tutorial string
 	var track string
-	var setupOnly bool
+	var prepareOnly bool
 	command := &cobra.Command{
-		Use:   "setup",
-		Short: "Create or verify the KubeCrypt training cluster",
+		Use:   "start",
+		Short: "Create the training cluster if needed and continue the current lab",
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			store, err := game.NewStore()
 			if err != nil {
@@ -130,8 +184,7 @@ func (a *app) setupCommand() *cobra.Command {
 			if _, err := a.ensureProfile(cmd, store, tutorial, track); err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.ErrOrStderr(), "Ensuring pinned kind and kubectl...")
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
@@ -149,7 +202,7 @@ func (a *app) setupCommand() *cobra.Command {
 			if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
 				return err
 			}
-			if setupOnly {
+			if prepareOnly {
 				fmt.Fprintf(cmd.OutOrStdout(), "KubeCrypt cluster verified and %s prepared.\n", scenario.Title)
 				return nil
 			}
@@ -158,47 +211,8 @@ func (a *app) setupCommand() *cobra.Command {
 	}
 	command.Flags().StringVar(&tutorial, "tutorial", "", "introductory tutorial: yes or no")
 	command.Flags().StringVar(&track, "track", "", "certification track when skipping the tutorial: cka or ckad")
-	command.Flags().BoolVar(&setupOnly, "setup-only", false, "prepare the current scenario without starting the TUI")
+	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
 	return command
-}
-
-func (a *app) resumeCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "resume",
-		Short: "Resume the current training scenario",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			manager, err := a.clusterManager(cmd.Context())
-			if err != nil {
-				return err
-			}
-			if _, err := manager.VerifyOwnership(cmd.Context()); err != nil {
-				return fmt.Errorf("run setup before resuming: %w", err)
-			}
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			profile, err := store.LoadProfile()
-			if err != nil {
-				return err
-			}
-			if !profile.OnboardingComplete {
-				return errors.New("run `kubecrypt setup` to complete onboarding")
-			}
-			registry, err := a.registry()
-			if err != nil {
-				return err
-			}
-			scenario, err := currentScenario(store, registry)
-			if err != nil {
-				return err
-			}
-			if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
-				return err
-			}
-			return a.runTrainingSession(cmd.Context(), scenario, manager, store)
-		},
-	}
 }
 
 func (a *app) statusCommand() *cobra.Command {
@@ -253,7 +267,7 @@ func (a *app) statusCommand() *cobra.Command {
 					}
 				}
 			}
-			manager, managerErr := a.clusterManager(cmd.Context())
+			manager, managerErr := a.clusterManager()
 			if managerErr == nil {
 				_, managerErr = manager.VerifyOwnership(cmd.Context())
 			}
@@ -269,221 +283,94 @@ func (a *app) statusCommand() *cobra.Command {
 
 func (a *app) resetCommand() *cobra.Command {
 	var force bool
-	var all bool
 	command := &cobra.Command{
-		Use:   "reset [scenario]",
-		Short: "Clear progress, reset a scenario, or reset everything",
-		Args:  cobra.MaximumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			if all && len(args) != 0 {
-				return errors.New("reset --all does not accept a scenario")
+		Use:   "reset",
+		Short: "Reset the current lab's progress and starting cluster state",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			store, err := game.NewStore()
+			if err != nil {
+				return err
 			}
-			if len(args) == 0 {
-				store, err := game.NewStore()
-				if err != nil {
-					return err
-				}
-				if all {
-					if err := a.confirm(cmd, force, "Destroy the KubeCrypt cluster and clear all learner data?"); err != nil {
-						return err
-					}
-					manager, err := a.clusterManager(cmd.Context())
-					if err != nil {
-						return err
-					}
-					if err := manager.Destroy(cmd.Context()); err != nil {
-						return err
-					}
-					if err := store.ClearLearnerState(); err != nil {
-						return err
-					}
-					fmt.Fprintln(cmd.OutOrStdout(), "KubeCrypt reset. Cluster and learner data removed.")
-					return nil
-				}
-				if err := a.confirm(cmd, force, "Clear your KubeCrypt profile and curriculum progress?"); err != nil {
-					return err
-				}
-				if err := store.ClearLearnerState(); err != nil {
-					return err
-				}
-				fmt.Fprintln(cmd.OutOrStdout(), "Learner profile and scenario progress cleared. Cluster retained.")
-				return nil
-			}
-
 			registry, err := a.registry()
 			if err != nil {
 				return err
 			}
-			scenario, err := registry.LoadScenario(args[0])
+			scenario, err := currentScenario(store, registry)
 			if err != nil {
 				return err
 			}
 			if err := a.confirm(cmd, force, fmt.Sprintf("Reset %s to its starting state?", scenario.Title)); err != nil {
 				return err
 			}
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
-			if err := wipeLabWorkspace(cmd.Context(), scenario, manager); err != nil {
+			if _, err := manager.VerifyOwnership(cmd.Context()); err != nil {
+				return fmt.Errorf("run kubecrypt start before resetting a lab: %w", err)
+			}
+			if err := restoreLabCluster(cmd.Context(), scenario, registry, manager); err != nil {
 				return err
 			}
-			manifest, err := scenarioResources(registry, scenario, scenario.Reset)
-			if err != nil {
+			if err := store.ResetScenarioProgress(scenario.ID); err != nil {
 				return err
 			}
-			if len(strings.TrimSpace(string(manifest))) > 0 {
-				if strings.TrimSpace(scenario.Namespace) != "" {
-					if err := manager.Apply(cmd.Context(), manifest); err != nil {
-						return err
-					}
-				} else if err := manager.Reset(cmd.Context(), manifest); err != nil {
-					return err
-				}
-			}
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			if err := pinLabWorkspace(cmd.Context(), scenario, manager); err != nil {
-				return err
-			}
-			if err := store.SelectScenario(scenario.ID); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s reset.\n", scenario.Title)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s reset. Run kubecrypt start to continue.\n", scenario.Title)
 			return nil
 		},
 	}
-	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive destructive operation")
-	command.Flags().BoolVar(&all, "all", false, "destroy the cluster and clear all learner data")
+	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive reset")
 	return command
 }
 
 func (a *app) destroyCommand() *cobra.Command {
 	var force bool
+	var all bool
 	command := &cobra.Command{
 		Use:   "destroy",
-		Short: "Destroy the verified KubeCrypt cluster",
+		Short: "Destroy the training cluster",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			if err := a.confirm(cmd, force, "Destroy the KubeCrypt cluster?"); err != nil {
+			prompt := "Destroy the KubeCrypt cluster?"
+			if all {
+				prompt = "Destroy the KubeCrypt cluster and clear all learner progress?"
+			}
+			if err := a.confirm(cmd, force, prompt); err != nil {
 				return err
 			}
-			manager, err := a.clusterManager(cmd.Context())
+			manager, err := a.clusterManager()
 			if err != nil {
 				return err
 			}
 			if err := manager.Destroy(cmd.Context()); err != nil {
 				return err
 			}
+			if all {
+				store, err := game.NewStore()
+				if err != nil {
+					return err
+				}
+				if err := store.ClearLearnerState(); err != nil {
+					return err
+				}
+				fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was cleared.")
+				return nil
+			}
 			fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was retained.")
 			return nil
 		},
 	}
-	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive destructive operation")
+	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive destroy")
+	command.Flags().BoolVar(&all, "all", false, "also clear learner progress")
 	return command
 }
 
-func (a *app) objectiveCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "objective",
-		Short: "Print the current objective",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			registry, err := a.registry()
-			if err != nil {
-				return err
-			}
-			scenario, err := currentScenario(store, registry)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), strings.TrimSpace(scenario.Objective))
-			return nil
-		},
-	}
-}
-
-func (a *app) hintCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "hint",
-		Short: "Reveal the next hint for the current scenario",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			registry, err := a.registry()
-			if err != nil {
-				return err
-			}
-			scenario, err := currentScenario(store, registry)
-			if err != nil {
-				return err
-			}
-			progress, err := store.LoadProgress()
-			if err != nil {
-				return err
-			}
-			used := progress.Scenarios[scenario.ID].HintsUsed
-			level := len(scenario.Hints)
-			for candidate := 1; candidate <= len(scenario.Hints); candidate++ {
-				if !slices.Contains(used, candidate) {
-					level = candidate
-					break
-				}
-			}
-			if err := store.RecordHint(scenario.ID, level); err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "Hint %d: %s\n", level, strings.TrimSpace(scenario.Hints[level-1]))
-			return nil
-		},
-	}
-}
-
-func (a *app) checkCommand() *cobra.Command {
-	return &cobra.Command{
-		Use:   "check",
-		Short: "Validate the current scenario's cluster state",
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			manager, err := a.clusterManager(cmd.Context())
-			if err != nil {
-				return err
-			}
-			if _, err := manager.VerifyOwnership(cmd.Context()); err != nil {
-				return err
-			}
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			registry, err := a.registry()
-			if err != nil {
-				return err
-			}
-			scenario, err := currentScenario(store, registry)
-			if err != nil {
-				return err
-			}
-			result, err := evaluateScenario(cmd.Context(), scenario, manager)
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s: %s\n", result.Status, result.Message)
-			if result.Status == validator.Success {
-				return store.CompleteScenario(scenario.ID)
-			}
-			return nil
-		},
-	}
-}
-
 func (a *app) packCommand() *cobra.Command {
-	pack := &cobra.Command{Use: "pack", Short: "Scenario-pack authoring tools"}
+	pack := &cobra.Command{
+		Use:    "pack",
+		Short:  "Scenario-pack authoring tools",
+		Hidden: true,
+	}
 	pack.AddCommand(&cobra.Command{
 		Use:   "validate <directory>",
 		Short: "Validate a local scenario pack",
@@ -515,7 +402,7 @@ func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, tutorialChoic
 	}
 	if tutorialChoice == "" {
 		if !readerIsTerminal(cmd.InOrStdin()) {
-			return game.Profile{}, errors.New("first non-interactive setup requires --tutorial=yes, or --tutorial=no with --track=cka|ckad")
+			return game.Profile{}, errors.New("first non-interactive start requires --tutorial=yes, or --tutorial=no with --track=cka|ckad")
 		}
 		fmt.Fprint(cmd.OutOrStdout(), "Would you like the introductory tutorial? [Y/n]: ")
 		line, readErr := input.ReadString('\n')
@@ -768,6 +655,26 @@ func wipeLabWorkspace(ctx context.Context, scenario *curriculum.Scenario, manage
 		return nil
 	}
 	return manager.WipeWorkspace(ctx, namespace)
+}
+
+func restoreLabCluster(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager) error {
+	if err := wipeLabWorkspace(ctx, scenario, manager); err != nil {
+		return err
+	}
+	manifest, err := scenarioResources(registry, scenario, scenario.Reset)
+	if err != nil {
+		return err
+	}
+	if len(strings.TrimSpace(string(manifest))) > 0 {
+		if strings.TrimSpace(scenario.Namespace) != "" {
+			if err := manager.Apply(ctx, manifest); err != nil {
+				return err
+			}
+		} else if err := manager.Reset(ctx, manifest); err != nil {
+			return err
+		}
+	}
+	return pinLabWorkspace(ctx, scenario, manager)
 }
 
 func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registry *curriculum.Registry, manager *cluster.Manager, wipe bool) error {

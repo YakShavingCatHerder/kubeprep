@@ -157,6 +157,30 @@ func TestEnsureToolsCopiesMatchingPATHBinary(t *testing.T) {
 	}
 }
 
+func TestRequireToolsReportsMissingBinaries(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	err := RequireTools(paths)
+	if err == nil || !strings.Contains(err.Error(), "kubecrypt doctor") {
+		t.Fatalf("RequireTools() error = %v, want a doctor remediation", err)
+	}
+}
+
+func TestRequireToolsAcceptsExistingBinaries(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	if err := os.MkdirAll(paths.BinDir(), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths.KindBinary(), []byte("kind"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(paths.KubectlBinary(), []byte("kubectl"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := RequireTools(paths); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestPinnedArtifactsCoverSupportedPlatforms(t *testing.T) {
 	for _, platform := range []string{"linux/amd64", "linux/arm64", "darwin/amd64", "darwin/arm64"} {
 		goos, goarch, _ := strings.Cut(platform, "/")
