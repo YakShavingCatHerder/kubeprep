@@ -165,6 +165,28 @@ func validateLabWorkspace(namespace string) error {
 	return nil
 }
 
+// SetContextNamespace points the dedicated kubeconfig at a lab workspace so
+// bare kubectl uses that namespace. kubecrypt-* names and default are allowed.
+// default is used for labs that have no declared workspace.
+func (m *Manager) SetContextNamespace(ctx context.Context, namespace string) error {
+	namespace = strings.TrimSpace(namespace)
+	if namespace == "" {
+		return fmt.Errorf("set context namespace: namespace must not be empty")
+	}
+	if namespace != "default" {
+		if err := validateLabWorkspace(namespace); err != nil {
+			return fmt.Errorf("set context namespace: %w", err)
+		}
+	}
+	if _, err := m.VerifyOwnership(ctx); err != nil {
+		return err
+	}
+	if err := m.runKubectl(ctx, nil, "config", "set-context", "--current", "--namespace", namespace); err != nil {
+		return fmt.Errorf("set context namespace %q: %w", namespace, err)
+	}
+	return nil
+}
+
 // Apply applies trusted manifest data after verifying cluster ownership.
 func (m *Manager) Apply(ctx context.Context, manifest []byte) error {
 	if _, err := m.VerifyOwnership(ctx); err != nil {

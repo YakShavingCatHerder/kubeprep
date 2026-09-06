@@ -189,6 +189,60 @@ func TestVerifyOwnershipChecksMarker(t *testing.T) {
 	}
 }
 
+func TestSetContextNamespacePinsKubecryptWorkspace(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	ca, fingerprint := testCA(t)
+	identity := Identity{
+		ClusterName:   ClusterName,
+		APIServer:     "https://127.0.0.1:6443",
+		CAFingerprint: fingerprint,
+	}
+	writeIdentityForTest(t, paths, identity)
+	runner := ownershipOKRunner(t, identity, ca, func(command Command) (Result, error) {
+		want := []string{"config", "set-context", "--current", "--namespace", "kubecrypt-foundations"}
+		if command.Name == "kubectl" && slices.Equal(command.Args, want) {
+			return Result{}, nil
+		}
+		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
+	})
+
+	if err := NewManagerWithPaths(runner, paths).SetContextNamespace(context.Background(), "kubecrypt-foundations"); err != nil {
+		t.Fatalf("SetContextNamespace() error = %v", err)
+	}
+	if got := countCommand(runner.got, "kubectl", "config", "set-context", "--current", "--namespace", "kubecrypt-foundations"); got != 1 {
+		t.Fatalf("set-context called %d times, want 1", got)
+	}
+}
+
+func TestSetContextNamespaceAllowsDefault(t *testing.T) {
+	paths := PathsForDirectory(t.TempDir())
+	ca, fingerprint := testCA(t)
+	identity := Identity{
+		ClusterName:   ClusterName,
+		APIServer:     "https://127.0.0.1:6443",
+		CAFingerprint: fingerprint,
+	}
+	writeIdentityForTest(t, paths, identity)
+	runner := ownershipOKRunner(t, identity, ca, func(command Command) (Result, error) {
+		want := []string{"config", "set-context", "--current", "--namespace", "default"}
+		if command.Name == "kubectl" && slices.Equal(command.Args, want) {
+			return Result{}, nil
+		}
+		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
+	})
+
+	if err := NewManagerWithPaths(runner, paths).SetContextNamespace(context.Background(), "default"); err != nil {
+		t.Fatalf("SetContextNamespace() error = %v", err)
+	}
+}
+
+func TestSetContextNamespaceRejectsUnscopedNamespace(t *testing.T) {
+	err := NewManagerWithPaths(&fakeRunner{}, PathsForDirectory(t.TempDir())).SetContextNamespace(context.Background(), "kube-system")
+	if err == nil || !strings.Contains(err.Error(), "kubecrypt-") {
+		t.Fatalf("SetContextNamespace() error = %v, want kubecrypt-* refusal", err)
+	}
+}
+
 func TestWipeWorkspaceDeletesKubecryptNamespace(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	ca, fingerprint := testCA(t)

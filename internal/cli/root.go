@@ -345,6 +345,9 @@ func (a *app) resetCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := pinLabWorkspace(cmd.Context(), scenario, manager); err != nil {
+				return err
+			}
 			if err := store.SelectScenario(scenario.ID); err != nil {
 				return err
 			}
@@ -729,7 +732,22 @@ func (a *app) enterScenario(ctx context.Context, scenario *curriculum.Scenario, 
 	if err := prepareScenario(ctx, scenario, registry, manager, wipe); err != nil {
 		return err
 	}
+	if err := pinLabWorkspace(ctx, scenario, manager); err != nil {
+		return err
+	}
 	return store.SelectScenario(scenario.ID)
+}
+
+func pinLabWorkspace(ctx context.Context, scenario *curriculum.Scenario, manager *cluster.Manager) error {
+	return manager.SetContextNamespace(ctx, contextNamespaceForLab(scenario))
+}
+
+func contextNamespaceForLab(scenario *curriculum.Scenario) string {
+	namespace := strings.TrimSpace(scenario.Namespace)
+	if namespace == "" {
+		return "default"
+	}
+	return namespace
 }
 
 func wipeIfNewLab(store *game.Store, scenarioID string) bool {
