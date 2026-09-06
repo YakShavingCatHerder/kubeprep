@@ -87,9 +87,11 @@ func (a *app) rootCommand() *cobra.Command {
 }
 
 // learnerUsageTemplate is Cobra's default usage text without the special-case
-// that always lists a command named "help".
-const learnerUsageTemplate = `Usage:{{if .Runnable}}
-  {{.UseLine}}{{end}}{{if .HasAvailableSubCommands}}
+// that always lists a command named "help". Root usage is a single line
+// (`kubecrypt [command] [flags]`) instead of separate flag and command lines.
+const learnerUsageTemplate = `Usage:{{if and .Runnable .HasAvailableSubCommands}}
+  {{.CommandPath}} [command]{{if .HasAvailableFlags}} [flags]{{end}}{{else if .Runnable}}
+  {{.UseLine}}{{else if .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{end}}{{if gt (len .Aliases) 0}}
 
 Aliases:

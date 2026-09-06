@@ -21,6 +21,12 @@ func TestBareCommandShowsHelp(t *testing.T) {
 		t.Fatalf("kubecrypt: %v", err)
 	}
 	got := output.String()
+	if !strings.Contains(got, "kubecrypt [command] [flags]") {
+		t.Errorf("help missing combined usage:\n%s", got)
+	}
+	if strings.Contains(got, "kubecrypt [flags]\n") || strings.Contains(got, "  kubecrypt [command]\n") {
+		t.Errorf("help still splits usage onto two lines:\n%s", got)
+	}
 	for _, want := range []string{"start", "status", "reset", "destroy", "doctor"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("help missing %q:\n%s", want, got)
