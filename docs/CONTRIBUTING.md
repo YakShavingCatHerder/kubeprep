@@ -5,7 +5,7 @@ KubeCrypt welcomes scenario-pack and engine contributions.
 ## Development
 
 1. Install Go 1.27 or newer and Docker. `kind` and `kubectl` are installed by
-   `kubecrypt setup` when you run the CLI. CI uses Go 1.27 for `gofmt` and tests.
+   `kubecrypt start` when you run the CLI. CI uses Go 1.27 for `gofmt` and tests.
 2. Run `make install` so `kubecrypt` is on your `PATH`.
 3. Run `go test ./...`.
 4. Run `go test -tags=integration ./tests/integration` for the disposable
@@ -30,10 +30,10 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   `internal/curriculum/bundled/`.
 - Do not include host shell commands, privileged workloads, host namespaces,
   or `hostPath` volumes.
-- Run `kubecrypt pack validate curriculum`.
+- Run `make validate-pack`.
 - Add a scenario test proving the initial state, target state, and
   reset behavior.
 
-Local packs can be loaded with `kubecrypt --pack <directory> resume`. Scenario
+Local packs can be loaded with `kubecrypt --pack <directory> start`. Scenario
 IDs must be unique across all active packs. All contributions are reviewed
 before they become bundled trusted curriculum.

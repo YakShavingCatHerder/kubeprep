@@ -1,4 +1,4 @@
-.PHONY: build snapshot test test-integration lint bundle-lesson install
+.PHONY: build snapshot test test-integration lint bundle-lesson install validate-pack
 
 LDFLAGS := -X github.com/YakShavingCatHerder/kubecrypt/internal/cli.Version=dev
 GOBIN := $(shell go env GOBIN)
@@ -21,8 +21,6 @@ endif
 
 build:
 	go build -ldflags="$(LDFLAGS)" -o bin/kubecrypt ./cmd/kubecrypt
-
-install: build
 	@mkdir -p "$(GOBIN)"
 	@cp bin/kubecrypt "$(GOBIN)/kubecrypt"
 	@echo "installed $(GOBIN)/kubecrypt"
@@ -33,6 +31,8 @@ install: build
 	    echo "  export PATH=\"$(GOBIN):\$$PATH\""; \
 	    ;; \
 	esac
+
+install: build
 
 snapshot:
 	goreleaser build --snapshot --clean
@@ -46,6 +46,11 @@ test-integration:
 lint:
 	gofmt -w $$(find cmd internal tests -name '*.go' -type f 2>/dev/null)
 	go vet ./...
+
+PACK ?= curriculum
+
+validate-pack: build
+	./bin/kubecrypt pack validate "$(PACK)"
 
 bundle-lesson:
 	@sh scripts/bundle-lesson.sh "$(LESSON)"

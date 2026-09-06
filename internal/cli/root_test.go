@@ -11,18 +11,25 @@ import (
 	"github.com/spf13/cobra"
 )
 
-func TestObjectiveCommandUsesBundledScenario(t *testing.T) {
-	t.Setenv("XDG_CONFIG_HOME", t.TempDir())
+func TestBareCommandShowsHelp(t *testing.T) {
 	var output bytes.Buffer
 	a := &app{in: strings.NewReader(""), out: &output, err: &output}
 	root := a.rootCommand()
-	root.SetArgs([]string{"objective"})
+	root.SetArgs([]string{})
 
 	if err := root.ExecuteContext(context.Background()); err != nil {
-		t.Fatalf("objective: %v", err)
+		t.Fatalf("kubecrypt: %v", err)
 	}
-	if strings.TrimSpace(output.String()) == "" {
-		t.Fatalf("unexpected objective output: %q", output.String())
+	got := output.String()
+	for _, want := range []string{"start", "status", "reset", "destroy", "doctor"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("help missing %q:\n%s", want, got)
+		}
+	}
+	for _, hidden := range []string{"\n  pack ", "\n  check ", "\n  setup ", "\n  resume ", "\n  completion ", "\n  help "} {
+		if strings.Contains(got, hidden) {
+			t.Errorf("help still lists %q:\n%s", strings.TrimSpace(hidden), got)
+		}
 	}
 }
 
@@ -31,16 +38,19 @@ func TestRootUsesNeutralCommands(t *testing.T) {
 	root := a.rootCommand()
 	names := make(map[string]bool)
 	for _, command := range root.Commands() {
+		if command.Hidden {
+			continue
+		}
 		names[command.Name()] = true
 	}
-	for _, expected := range []string{"setup", "destroy", "pack"} {
+	for _, expected := range []string{"start", "status", "reset", "destroy", "doctor"} {
 		if !names[expected] {
 			t.Errorf("missing command %q", expected)
 		}
 	}
-	for _, removed := range []string{"check-in", "checkout", "lesson"} {
+	for _, removed := range []string{"setup", "resume", "check", "hint", "objective", "completion", "help", "check-in", "checkout", "lesson"} {
 		if names[removed] {
-			t.Errorf("themed command %q is still registered", removed)
+			t.Errorf("removed command %q is still visible", removed)
 		}
 	}
 }

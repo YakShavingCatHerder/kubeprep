@@ -110,6 +110,39 @@ func TestProgressRoundTripAndMutations(t *testing.T) {
 	assertOwnerOnly(t, store.Dir(), filepath.Join(store.Dir(), "progress.json"))
 }
 
+func TestResetScenarioProgressClearsOneLab(t *testing.T) {
+	t.Parallel()
+
+	store := newTestStore(t, time.Now())
+	if err := store.RecordHint("cluster-components", 1); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.CompleteScenario("cluster-components"); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.RecordHint("pod-creation", 2); err != nil {
+		t.Fatal(err)
+	}
+	if err := store.ResetScenarioProgress("cluster-components"); err != nil {
+		t.Fatal(err)
+	}
+	progress, err := store.LoadProgress()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if progress.CurrentScenarioID != "cluster-components" {
+		t.Fatalf("current scenario = %q", progress.CurrentScenarioID)
+	}
+	reset := progress.Scenarios["cluster-components"]
+	if reset.CompletedAt != nil || len(reset.HintsUsed) != 0 {
+		t.Fatalf("reset lab progress = %#v", reset)
+	}
+	kept := progress.Scenarios["pod-creation"]
+	if len(kept.HintsUsed) != 1 || kept.HintsUsed[0] != 2 {
+		t.Fatalf("other lab progress = %#v", kept)
+	}
+}
+
 func TestRetainScenariosRemovesUnavailableProgress(t *testing.T) {
 	t.Parallel()
 

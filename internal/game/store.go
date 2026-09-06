@@ -227,6 +227,24 @@ func (s *Store) RecordHint(scenarioID string, hint int) error {
 	return s.saveProgress(progress)
 }
 
+// ResetScenarioProgress clears hints and completion for one scenario and
+// makes it the current lab. Other labs are left alone.
+func (s *Store) ResetScenarioProgress(scenarioID string) error {
+	stateMu.Lock()
+	defer stateMu.Unlock()
+
+	if scenarioID == "" {
+		return errors.New("reset scenario progress: scenario ID must not be empty")
+	}
+	progress, err := s.loadProgress()
+	if err != nil {
+		return err
+	}
+	progress.Scenarios[scenarioID] = ScenarioProgress{}
+	progress.CurrentScenarioID = scenarioID
+	return s.saveProgress(progress)
+}
+
 // SelectScenario records which authored scenario should be resumed.
 func (s *Store) SelectScenario(scenarioID string) error {
 	stateMu.Lock()
