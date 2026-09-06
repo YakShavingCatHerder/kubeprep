@@ -56,7 +56,7 @@ prints the `export PATH=...` line to add.
 
 `start` creates an isolated three-node `kubecrypt` cluster if needed and opens
 the current lab. On first start it asks which track you are following
-(Foundations, CKA, or CKAD). For scripts, pass `--track=beginner`,
+(Beginner, CKA, or CKAD). For scripts, pass `--track=beginner`,
 `--track=cka`, or `--track=ckad`.
 
 `start` opens a permanent split view: the scenario stays on screen

@@ -1,138 +1,112 @@
-# Contribute a KubeCrypt module
+# Author a lab
 
-Thank you for considering a contribution. You do not need to write Go.
+KubeCrypt labs are YAML. Learners use a real shell against a dedicated `kind`
+cluster. The runner grades the cluster that results, not the commands they
+typed, so any legitimate `kubectl` path can pass.
 
-KubeCrypt labs are declarative YAML. Learners fix a real `kind` cluster in a
-split view with a real shell. We grade the resulting cluster state—not the
-commands they typed—so every legitimate `kubectl` path can succeed.
+You do not need to write Go.
 
-Your work can ship to every learner. A merged core module is bundled into the
-**next official KubeCrypt release** and becomes part of `kubecrypt start`.
+This directory is a scratch workspace. `kubecrypt start` does not load it. A
+lab reaches learners when it is published under `curriculum/` and bundled into
+the binary.
 
-## Land in the next official release
+## Write one file
 
-KubeCrypt is early, and the bundled curriculum is still growing on purpose.
-**v0.1** is the framework release: doctor, start, the split Lab Shell, and the
-orientation labs. Each official release after that adds a chapter of real
-practice.
+Copy [`example-module.yaml`](example-module.yaml). Each field has a comment
+that says what belongs there.
 
-When a pull request is reviewed and merged into `curriculum/`, it is core
-curriculum. The following tagged release embeds it in the binary. Anyone who
-installs that version gets your labs with no extra packs and no rebuild of
-their own.
+The file has two parts:
 
-That is the difference from `--pack`: local packs are perfect for drafting,
-classrooms, and personal content, and they work the same day. Core publication
-is how a lab becomes the shared CKA/CKAD path.
+- `authoring` is notes for reviewers and agents. It is not shown to learners
+  and is never applied. `desiredClusterConfiguration` is a review fixture
+  only. Pass and fail come from `checks`.
+- The rest is the Scenario the runner loads: start state, checks, hints,
+  completion, and debrief.
 
-We merge in catalog order when we can. Careful labs in `01-foundations` and
-`02-workloads` help the most right now. One well-taught scenario is more useful
-than an unfinished chapter. First-time authors are welcome; review exists so
-bundled YAML stays trusted.
+Set `authoring.section` and `module` to the same section id (`pods`,
+`scheduling`, `rbac`, and so on). The published path is
+`{section}/{id}.yaml`. `tracks` lists which playlists may include the lab.
+Play order lives in `catalog.yaml`, not in the lab file.
 
-## 1. Start with the questionnaire
+Start from a broken or incomplete cluster. Reset must restore that same
+start, not a healthy cluster.
 
-Copy [`example-module.yaml`](example-module.yaml) and fill it in. That file is
-the design brief: what you are teaching, the broken starting state, the done
-condition, hints, and the debrief.
+## Run it from a local pack
 
-Pick a **slot** so the lab sits in the right chapter and the right release:
-
-| Slot | Teaches | Official release |
-| --- | --- | --- |
-| `00-orientation` | Lab shell, kubeconfig, cluster components | v0.1 — in tree now |
-| `01-foundations` | kubectl, contexts, namespaces, API resources, YAML | Next after v0.1 |
-| `02-workloads` | Pods, Jobs, CronJobs, Deployments, DaemonSets, StatefulSets | v0.2 |
-| `03-scheduling` | Labels, selectors, taints, tolerations, affinity, resources | v0.3 |
-| `04-storage` | PVs, PVCs, StorageClasses, reclaim behavior | v0.4 |
-| `05-networking` | Services, EndpointSlices, DNS, NetworkPolicy, ingress | v0.5 |
-| `06-cluster-admin` | RBAC, ServiceAccounts, Helm, Kustomize, CRDs | v0.6 |
-| `07-troubleshooting` | Mixed-domain failures, less guidance | v0.7 |
-
-Exam mode is v1.0. It is not a numbered slot; later mixed labs feed it.
-
-From the slot we infer module id, catalog order, domain, tracks, Kubernetes
-1.35, namespace `kubecrypt-<id>`, and shrinking guidance (first lab more
-helped, last lab more independent). Use `overrides` in the questionnaire only
-when those defaults are wrong.
-
-`00-orientation` is observe-only. Other slots are challenges: setup applies a
-broken or incomplete state, and reset restores that same start—not a healthy
-cluster.
-
-## 2. Choose how you want to ship it
-
-**Try it locally first.** A pack is just a directory with `catalog.yaml`,
-scenario files, and manifests. Nothing is compiled in.
+A pack is a directory with `catalog.yaml`, lab files, and any extra
+manifests. Nothing is compiled.
 
 ```sh
 make validate-pack PACK=./my-pack
 kubecrypt --pack ./my-pack start
 ```
 
-**Publish into core** when the module should ship in the next official
-release. Canonical files live under `curriculum/<slot>/`. The binary embeds a
-copy from `internal/curriculum/bundled/`, and tests require those two trees to
-match byte-for-byte. After you edit `curriculum/`, register the lab in
-`curriculum/catalog.yaml` and sync the embedded copy:
+Do not point a catalog at this `contribute/` directory. Lab ids must be
+unique across the bundled pack and every `--pack` you load.
 
-```sh
-make bundle-lesson 01-foundations/01-pod-creation
-```
+## Publish into core
 
-That command fails if the catalog has no matching `path:` entry. When the
-catalog lists the lab, it copies both the scenario file and `catalog.yaml`.
+Canonical labs live at `curriculum/{section}/{id}.yaml`. The binary embeds
+`internal/curriculum/bundled/`. Tests require those two trees to match.
 
-| | Local pack | Published in core |
-| --- | --- | --- |
-| Learners get it | `kubecrypt --pack ./my-pack start` | Next official `kubecrypt` release |
-| Catalog | `my-pack/catalog.yaml` | `curriculum/catalog.yaml` |
-| Mirror the files | No | Yes — `internal/curriculum/bundled/` |
-| Validate | `make validate-pack PACK=./my-pack` | `make validate-pack` |
+1. Write the lab under `curriculum/{section}/`.
+2. Add the id under the right path and section in `curriculum/catalog.yaml`.
+   The same id can appear on more than one path; it is still one file.
+3. Sync the embedded copy:
 
-Scenario IDs must be unique across the bundled pack and any `--pack` you load.
-Do not add this `contribute/` directory to a catalog.
+   ```sh
+   make bundle-lesson pods/pod-creation
+   ```
 
-## 3. Register the labs
+   That fails if the catalog does not list the id. When it succeeds, it
+   copies the lab file and `catalog.yaml`.
+4. Run `make validate-pack`.
+5. Add a test that setup succeeds, the start is incomplete or broken, the
+   target state is accepted, and reset restores the start. Prove one
+   alternate valid fix when you can.
 
-Module `id` is the slot without the number (`01-foundations` → `foundations`).
-Each scenario `id` and `path` must match the file, and `module:` inside the
-scenario must match the catalog module id. Lab files are numbered inside the
-slot so play order is visible: `01-foundations/01-pod-creation.yaml` is always
-the first foundations lab. Catalog list order must match those numbers.
+## Catalog shape
+
+The catalog is a nested playlist: path → section → lab ids. Files have no
+numeric prefixes. List order under a path is the order learners play those
+labs. It is not the order labs have to be written or merged.
 
 ```yaml
-  - id: foundations
-    title: Foundations
-    scenarios:
-      - id: inspect-namespace
-        path: 01-foundations/01-inspect-namespace.yaml
+paths:
+  - id: beginner
+    title: Beginner
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
+  - id: cka
+    title: CKA
+    sections:
+      - id: pods
+        labs:
+          - pod-creation
 ```
 
-Use the same shape in a local pack’s `catalog.yaml`, with paths relative to
-that pack.
+Paths today are `beginner`, `cka`, and `ckad`. Use the same shape in a
+local pack.
 
-## 4. What a strong lab looks like
+## What the runner grades
 
-- The start is intentionally incomplete or broken.
-- “Done” is a measurable cluster state.
-- Scale, edit, patch, apply, or recreate all pass if the state is right.
-- Exactly three hints: conceptual, then what to inspect, then a concrete next step.
-- The debrief explains the real Kubernetes mechanism.
-- Declare `namespace: kubecrypt-<id>` on the scenario when the lab needs a
-  workspace Namespace. The runner creates it on start and recreates it on reset.
-  Extra broken objects still belong in setup/reset manifest files.
+Checks describe measurable cluster state. `kubectl scale`, `edit`, `patch`,
+`apply`, or recreate all pass if that state is right.
 
-Checks the runner can evaluate today: `objectExists`, `fieldEquals`,
+Implemented check types: `objectExists`, `fieldEquals`,
 `deploymentAvailable`, `podReady`, `containersHealthy`, `nodeTopology`.
 
-Keep resources in a `kubecrypt-*` namespace. Skip host commands, `hostPath`,
-privileged containers, and cluster-scoped kinds such as `ClusterRole`.
+Hints must be exactly three, in this order: the concept, what to inspect,
+then one concrete command or next step. The debrief should explain the real
+Kubernetes mechanism and name the objects involved.
 
-Published labs should also have a test that setup succeeds, the start is
-broken, the target is accepted, and reset restores the start—plus one
-alternate valid fix when you can.
+Give the lab a `kubecrypt-*` namespace when it needs a workspace. The
+runner creates that namespace on start and recreates it on reset. Extra
+broken objects belong in `startingClusterConfiguration` or in setup/reset
+manifest files.
 
-Open a pull request when you are ready. After review and merge, the work is
-queued for the next official release that covers that slot. Questions and
-first-time modules are welcome.
+Keep resources in a `kubecrypt-*` namespace. Do not use host commands,
+`hostPath`, privileged containers, or cluster-scoped kinds such as
+`ClusterRole`.

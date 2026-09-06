@@ -82,7 +82,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("indexed container image matches", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.27"}]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -94,7 +94,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("indexed container image differs", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.26"}]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -107,7 +107,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("missing indexed field is wrong", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -380,9 +380,9 @@ func TestAllCombinesResultsWithDeterministicSeverity(t *testing.T) {
 
 func TestPodCreationChecksGradeStoredObject(t *testing.T) {
 	checks := All(
-		ObjectExists{Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx"},
+		ObjectExists{Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx"},
 		FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		},
 	)

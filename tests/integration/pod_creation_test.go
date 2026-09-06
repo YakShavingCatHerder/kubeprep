@@ -56,7 +56,7 @@ func TestPodCreationGradesStoredAPIObject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(setup, []byte("kubecrypt-foundations")) {
+	if !bytes.Contains(setup, []byte("kubecrypt-beginner")) {
 		t.Fatalf("setup missing declared namespace: %s", setup)
 	}
 	if err := manager.Apply(ctx, setup); err != nil {
@@ -82,7 +82,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: nginx
-  namespace: kubecrypt-foundations
+  namespace: kubecrypt-beginner
 spec:
   containers:
     - name: web
@@ -97,7 +97,7 @@ spec:
 	}
 	waitForStatus(t, ctx, runner, check, validator.Wrong, 2*time.Minute)
 
-	if _, err := runner.Run(ctx, "run", "nginx", "--image=nginx:1.27", "--namespace", "kubecrypt-foundations"); err != nil {
+	if _, err := runner.Run(ctx, "run", "nginx", "--image=nginx:1.27", "--namespace", "kubecrypt-beginner"); err != nil {
 		t.Fatalf("kubectl run: %v", err)
 	}
 	waitForStatus(t, ctx, runner, check, validator.Success, 30*time.Second)
@@ -105,9 +105,9 @@ spec:
 
 func podCreationCheck() validator.Check {
 	return validator.All(
-		validator.ObjectExists{Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx"},
+		validator.ObjectExists{Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx"},
 		validator.FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-foundations", Name: "nginx",
+			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		},
 	)

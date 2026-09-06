@@ -103,30 +103,28 @@ func NewRegistryFromSources(sources ...Source) (*Registry, error) {
 			return nil, fmt.Errorf("scenario source %q: duplicate pack name %q", source.Name, catalog.Name)
 		}
 		seenPacks[catalog.Name] = struct{}{}
-		for _, module := range catalog.Modules {
-			for _, ref := range module.Scenarios {
-				if previous, exists := registry.locations[ref.ID]; exists {
-					return nil, fmt.Errorf("scenario source %q: duplicate scenario id %q already provided by %q",
-						source.Name, ref.ID, registry.sources[previous.sourceIndex].Name)
-				}
-				scenario, loadErr := loadFS(source.FS, ref.Path, source.Name+":"+ref.Path)
-				if loadErr != nil {
-					return nil, loadErr
-				}
-				if scenario.ID != ref.ID {
-					return nil, fmt.Errorf("scenario source %q: catalog id %q does not match file id %q", source.Name, ref.ID, scenario.ID)
-				}
-				if scenario.Module != module.ID {
-					return nil, fmt.Errorf("scenario source %q: scenario %q declares module %q, catalog uses %q",
-						source.Name, ref.ID, scenario.Module, module.ID)
-				}
-				registry.locations[ref.ID] = scenarioLocation{
-					sourceIndex: sourceIndex,
-					filename:    ref.Path,
-					scenario:    scenario,
-				}
-				registry.order = append(registry.order, ref.ID)
+		for _, ref := range catalog.UniqueLabs() {
+			if previous, exists := registry.locations[ref.ID]; exists {
+				return nil, fmt.Errorf("scenario source %q: duplicate scenario id %q already provided by %q",
+					source.Name, ref.ID, registry.sources[previous.sourceIndex].Name)
 			}
+			scenario, loadErr := loadFS(source.FS, ref.Path, source.Name+":"+ref.Path)
+			if loadErr != nil {
+				return nil, loadErr
+			}
+			if scenario.ID != ref.ID {
+				return nil, fmt.Errorf("scenario source %q: catalog id %q does not match file id %q", source.Name, ref.ID, scenario.ID)
+			}
+			if scenario.Module != ref.Section {
+				return nil, fmt.Errorf("scenario source %q: scenario %q declares module %q, catalog section is %q",
+					source.Name, ref.ID, scenario.Module, ref.Section)
+			}
+			registry.locations[ref.ID] = scenarioLocation{
+				sourceIndex: sourceIndex,
+				filename:    ref.Path,
+				scenario:    scenario,
+			}
+			registry.order = append(registry.order, ref.ID)
 		}
 		registry.catalogs = append(registry.catalogs, *catalog)
 	}
@@ -169,6 +167,25 @@ func (r *Registry) Catalogs() []Catalog {
 
 func (r *Registry) ScenarioIDs() []string {
 	return append([]string(nil), r.order...)
+}
+
+// PlayOrder is lab ids for one learner path across every loaded pack.
+func (r *Registry) PlayOrder(pathID string) []string {
+	var ids []string
+	seen := make(map[string]struct{})
+	for _, catalog := range r.catalogs {
+		for _, id := range catalog.LabIDsOnPath(pathID) {
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			if _, known := r.locations[id]; !known {
+				continue
+			}
+			seen[id] = struct{}{}
+			ids = append(ids, id)
+		}
+	}
+	return ids
 }
 
 func (r *Registry) LoadScenario(id string) (*Scenario, error) {
