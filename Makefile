@@ -1,4 +1,4 @@
-.PHONY: build snapshot test test-integration lint install validate-lab ci
+.PHONY: build snapshot test test-integration lint install validate-lab demo ci
 
 LDFLAGS := -X github.com/YakShavingCatHerder/kubeprep/internal/cli.Version=dev
 GOBIN := $(shell go env GOBIN)
@@ -39,6 +39,11 @@ CURRICULUM ?= curriculum
 validate-lab:
 	go build -ldflags="$(LDFLAGS)" -o bin/kubeprep ./cmd/kubeprep
 	./bin/kubeprep lab validate "$(CURRICULUM)"
+
+# Records docs/demo.gif (lab try → split TUI). Needs vhs, ffmpeg, ttyd, and an existing training cluster.
+demo: build
+	./bin/kubeprep start --track=beginner --prepare-only
+	vhs docs/demo.tape
 
 # Matches the GitHub unit job (not the kind integration job).
 ci:
