@@ -16,10 +16,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
-      - run: test -z "$(gofmt -l .)"
-      - run: go mod tidy -diff
-      - run: go vet ./...
-      - run: go test -race ./...
+      - run: make ci
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

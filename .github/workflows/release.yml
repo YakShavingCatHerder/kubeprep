@@ -19,6 +19,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - run: make ci
       - uses: goreleaser/goreleaser-action@v6
         with:
           distribution: goreleaser

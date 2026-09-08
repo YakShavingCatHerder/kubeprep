@@ -86,6 +86,7 @@ change `start` until you `make install`.
 ```sh
 kubecrypt lab try test-lab.yaml      # validate and run; does not write curriculum/
 kubecrypt lab publish test-lab.yaml  # copy into curriculum/ and catalog.yaml
+kubecrypt lab validate               # check ./curriculum (or a directory)
 ```
 
 Details: [contribute/README.md](contribute/README.md).

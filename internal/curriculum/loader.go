@@ -124,8 +124,9 @@ func NewRegistryFromSources(sources ...Source) (*Registry, error) {
 	return registry, nil
 }
 
-// ValidatePack validates a standalone local pack without loading the core pack.
-func ValidatePack(directory string) (*Catalog, error) {
+// ValidateLabs validates a curriculum directory without loading the embedded
+// core labs.
+func ValidateLabs(directory string) (*Catalog, error) {
 	registry, err := NewRegistryFromDirectory(directory)
 	if err != nil {
 		return nil, err

@@ -55,6 +55,17 @@ The shipped `pod-creation` lab has an integration test under
 `tests/integration`. New published labs should prove setup, incomplete start,
 accepted target state, and reset. That is not a `lab publish` gate yet.
 
+## Validate
+
+```sh
+kubecrypt lab validate
+make validate-lab
+```
+
+`make validate-lab` (default `CURRICULUM=curriculum`) runs
+`kubecrypt lab validate` on a directory with `catalog.yaml`. That checks the
+labs. It does not load them into `start`.
+
 ## Catalog
 
 Nested playlist: path → section → lab ids. No numeric prefixes on files. List
@@ -74,15 +85,11 @@ Paths are `beginner`, `cka`, and `ckad`. The same id may appear on more than
 one path; it is still one file. `lab publish` appends the id to each track in
 `tracks`. It does not reorder existing lists.
 
-`make validate-pack` (default `PACK=curriculum`) runs hidden
-`kubecrypt pack validate` on a directory with `catalog.yaml`. That checks the
-pack. It does not load it into `start`.
-
 ## Checks
 
 Any `kubectl` path that produces the graded state passes.
 
-Types that run (unknown names fail pack validation):
+Types that run (unknown names fail lab validation):
 
 - `objectExists`
 - `fieldEquals`
