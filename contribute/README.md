@@ -1,14 +1,18 @@
 # Author a lab
 
-KubeCrypt labs are YAML. Learners use a real shell against a dedicated `kind`
-cluster. The runner grades the cluster that results, not the commands they
-typed, so any legitimate `kubectl` path can pass.
+Labs are YAML. Learners use a real shell on a dedicated `kind` cluster. The
+runner grades the cluster that results, not the commands they typed, so any
+legitimate `kubectl` path can pass.
 
 You do not need to write Go.
 
-This directory is a scratch workspace. `kubecrypt start` does not load it. A
-lab reaches learners when it is published under `curriculum/`. That directory
-is the core pack; the binary embeds it at compile time.
+This directory is a scratch pad. `kubecrypt start` does not load it. A lab
+reaches `start` when it lives under `curriculum/` **and** you rebuild the
+binary. Until then, use `lab try` (draft) or `lab publish` (write the pack on
+disk and run that copy).
+
+Run these commands from the repository root. Pass the filename inside
+`contribute/` only (`test-lab.yaml`), not `contribute/test-lab.yaml`.
 
 ## Write one file
 
@@ -31,49 +35,41 @@ Play order lives in `catalog.yaml`, not in the lab file.
 Start from a broken or incomplete cluster. Reset must restore that same
 start, not a healthy cluster.
 
-## Try it
-
-From the repository root:
+## Try (does not write the pack)
 
 ```sh
 kubecrypt lab try test-lab.yaml
 ```
 
-Pass the filename inside `contribute/`. Do not prefix `contribute/`.
+That schema-validates the file, checks sidecar manifests, builds a one-lab
+overlay in a temp directory, and opens that lab. It does not change
+`curriculum/` or `catalog.yaml`. Other labs' progress is left in place; the
+previous current lab is restored when you leave.
 
-That validates the file, checks sidecar manifests, builds a one-lab overlay
-pack in a temp directory, and starts that lab. It does not write
-`curriculum/` or `catalog.yaml`. You do not rebuild. Learner progress for
-other labs is left in place.
-
-Do not point a catalog at this `contribute/` directory. Lab ids must be unique
-across the pack.
-
-## Publish into core
-
-When the draft is ready:
+## Publish (writes the pack)
 
 ```sh
 kubecrypt lab publish test-lab.yaml
 ```
 
-That writes `curriculum/{section}/{id}.yaml` and lists the id in
-`catalog.yaml` under the lab's tracks, then validates the pack and starts
-that lab from disk. The binary embeds that tree. There is no second copy to
-sync.
+That copies the file to `curriculum/{section}/{id}.yaml`, lists the id in
+`catalog.yaml` under the lab's `tracks`, validates `./curriculum`, and starts
+that lab from disk. Missing `./curriculum` is an error. It does not rebuild
+the binary.
 
-Add a test that setup succeeds, the start is incomplete or broken, the target
-state is accepted, and reset restores the start. Prove one alternate valid
-fix when you can.
+`kubecrypt start` still uses the embed from the last `make install`. Publish
+again after edits if you want the on-disk pack updated; rebuild when you want
+`start` to include the lab.
 
-`make install` is only needed when you want the lab inside a plain
-`kubecrypt start`.
+The shipped `pod-creation` lab has an integration test under
+`tests/integration`. New published labs should prove setup, incomplete start,
+accepted target state, and reset. That is not a `lab publish` gate yet.
 
 ## Catalog shape
 
 The catalog is a nested playlist: path → section → lab ids. Files have no
 numeric prefixes. List order under a path is the order learners play those
-labs. It is not the order labs have to be written or merged.
+labs.
 
 ```yaml
 paths:
@@ -91,16 +87,30 @@ paths:
           - pod-creation
 ```
 
-Paths today are `beginner`, `cka`, and `ckad`. Use the same shape in a
-local pack.
+Paths today are `beginner`, `cka`, and `ckad`. The same id may appear on more
+than one path; it is still one file. `lab publish` appends the id to each
+track in `tracks`. It does not reorder existing lists.
+
+`make validate-pack` (default `PACK=curriculum`) runs the hidden
+`kubecrypt pack validate` command on a directory that contains `catalog.yaml`.
+That checks the pack. It does not load the pack into `start`.
 
 ## What the runner grades
 
 Checks describe measurable cluster state. `kubectl scale`, `edit`, `patch`,
 `apply`, or recreate all pass if that state is right.
 
-Implemented check types: `objectExists`, `fieldEquals`,
-`deploymentAvailable`, `podReady`, `containersHealthy`, `nodeTopology`.
+Types that actually run:
+
+- `objectExists`
+- `fieldEquals`
+- `deploymentAvailable`
+- `podReady`
+- `containersHealthy`
+- `nodeTopology`
+
+Other type names may pass file validation and then fail when the lab is
+checked (`F2`). Do not use them.
 
 Hints must be exactly three, in this order: the concept, what to inspect,
 then one concrete command or next step. The debrief should explain the real
@@ -109,7 +119,7 @@ Kubernetes mechanism and name the objects involved.
 Give the lab a `kubecrypt-*` namespace when it needs a workspace. The
 runner creates that namespace on start and recreates it on reset. Extra
 broken objects belong in `startingClusterConfiguration` or in setup/reset
-manifest files.
+manifest files next to the lab YAML.
 
 Keep resources in a `kubecrypt-*` namespace. Do not use host commands,
 `hostPath`, privileged containers, or cluster-scoped kinds such as

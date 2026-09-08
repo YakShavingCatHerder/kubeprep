@@ -7,11 +7,15 @@ KubeCrypt separates scenario intent from where a scenario runs.
 The `kubecrypt` process owns:
 
 - learner onboarding and progress,
-- core and local scenario-pack loading,
+- the core curriculum pack embedded from `curriculum/` at compile time,
 - KubeCrypt cluster lifecycle,
 - state validation,
 - the Bubble Tea scenario view with a permanent split: scenario pane plus a
   real PTY Lab Shell.
+
+Authors run a contribute file with `lab try` (temp overlay, no pack writes)
+or `lab publish` (write `./curriculum`, then start that copy from disk).
+`start` does not load extra directories and does not provide `--pack`.
 
 The Lab Shell receives a dedicated kubeconfig through its process environment.
 KubeCrypt's own mutating operations independently verify cluster ownership;
@@ -25,8 +29,9 @@ they never trust the shell or the user's global current context.
 - `internal/game` owns learner profile and progress.
 - `internal/terminal` renders the split scenario view and hosts the Lab Shell PTY.
 
-Neither curriculum nor validators depend on Bubble Tea. Local and embedded
-packs follow the same schema and safety validation.
+Neither curriculum nor validators depend on Bubble Tea. Overlay drafts,
+on-disk `curriculum/`, and the embedded pack follow the same schema and
+safety validation.
 
 ## Future hosted mode
 

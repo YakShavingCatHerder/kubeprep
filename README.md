@@ -1,34 +1,27 @@
 # KubeCrypt
 
-KubeCrypt is a terminal-native framework for Kubernetes certification training.
-It runs declarative scenarios against a disposable local
-[`kind`](https://kind.sigs.k8s.io/) cluster and evaluates the resulting cluster
-state—not the commands used to reach it.
+KubeCrypt is a terminal app for practicing Kubernetes on a dedicated local
+[`kind`](https://kind.sigs.k8s.io/) cluster. You type real `kubectl` in a real
+shell. It grades the cluster state that results, not the commands you used.
 
-The bundled starter pack contains:
-
-1. **Create a Pod** — submit a Pod to the API server and confirm the stored
-   object in the isolated training cluster.
-
-Draft labs in [`contribute/`](contribute/) with `kubecrypt lab try`. Publish
-them into `curriculum/` with `kubecrypt lab publish`. `kubecrypt start` uses
-the pack embedded at compile time.
+This is early. The binary ships **one lab**: [First API Object](curriculum/pods/pod-creation.yaml)
+(`pod-creation`). Tracks (Beginner, CKA, CKAD) exist; today they all play that
+lab. There is no `exam` command and no `--pack` flag.
 
 ## Requirements
 
 - macOS or Linux (amd64 or arm64)
-- Docker (or a Docker-compatible runtime usable by `kind`)
+- Docker, or another daemon `kind` can use
 
-`kind` and `kubectl` are installed by `kubecrypt doctor` into the KubeCrypt
-config directory (pinned to Kubernetes 1.35). You do not need to install them
-yourself.
+`kubecrypt doctor` installs pinned `kind` and `kubectl` (Kubernetes 1.35) into
+the KubeCrypt config directory. You do not install those two yourself.
 
 ## Install
 
-Tagged releases publish `kubecrypt` binaries for Linux and macOS (amd64 and
-arm64) from [YakShavingCatHerder/kubecrypt](https://github.com/YakShavingCatHerder/kubecrypt).
-Download the archive for your platform from GitHub Releases, unpack it, and
-put `kubecrypt` on your `PATH`.
+Tagged releases publish `kubecrypt` for Linux and macOS (amd64 and arm64) from
+[YakShavingCatHerder/kubecrypt](https://github.com/YakShavingCatHerder/kubecrypt).
+Download the archive for your platform, unpack it, and put `kubecrypt` on your
+`PATH`.
 
 ```sh
 # Example: macOS Apple Silicon, after downloading the release archive
@@ -37,12 +30,11 @@ sudo mv kubecrypt /usr/local/bin/
 kubecrypt --version
 ```
 
-You still need Docker (or a compatible daemon) running. `kubecrypt doctor`
-installs pinned `kind` and `kubectl` into the KubeCrypt config directory.
+Docker (or a compatible daemon) must already be running.
 
-## Build and set up
+## Build from source
 
-From source (Go 1.27 or newer; matches CI `gofmt`):
+Go 1.27 or newer (same as CI `gofmt`):
 
 ```sh
 make install
@@ -50,61 +42,65 @@ kubecrypt doctor
 kubecrypt start
 ```
 
-`make build` writes `./bin/kubecrypt`. `make install` copies that binary into
-`$(go env GOPATH)/bin` (or `GOBIN`) so you can run `kubecrypt` without a path
-prefix. If that directory is not already on your `PATH`, the install target
-prints the `export PATH=...` line to add.
+`make install` writes `./bin/kubecrypt` and copies it to `$(go env GOPATH)/bin`
+(or `GOBIN`). If that directory is not on your `PATH`, the target prints the
+`export PATH=...` line to add.
 
-`start` creates an isolated three-node `kubecrypt` cluster if needed and opens
-the current lab. On first start it asks which track you are following
-(Beginner, CKA, or CKAD). For scripts, pass `--track=beginner`,
-`--track=cka`, or `--track=ckad`.
-
-`start` opens a permanent split view: the scenario stays on screen
-while a real Lab Shell runs in the other pane with a session-only `KUBECONFIG`.
-Press `?` or `F1` for a hint, `F2` to validate cluster state, `F11` to zoom the
-shell, and `F10` to leave. After a scenario is completed you are asked whether
-to continue; `y` opens the next scenario in the same session, and `F10` (or `n`)
-ends training. In the Cursor/VS Code terminal, `F1` is often captured
-by the editor; use `?`.
-
-Useful commands:
+## Train
 
 ```sh
-kubecrypt
-kubecrypt start
-kubecrypt lab try <file>
-kubecrypt lab publish <file>
-kubecrypt status
-kubecrypt reset
-kubecrypt destroy
+kubecrypt doctor   # install kind/kubectl, check OS and Docker
+kubecrypt start    # create the cluster if needed, open the current lab
+```
+
+First start asks which track you are on unless you pass `--track=beginner`,
+`--track=cka`, or `--track=ckad`.
+
+`start` splits the terminal: the scenario stays visible while a Lab Shell runs
+beside it with a session-only `KUBECONFIG` for the KubeCrypt cluster. After you
+complete a lab you can continue to the next one on that track, or leave.
+
+| Key | Action |
+| --- | --- |
+| `?` or `F1` | hint (`?` if the editor steals `F1`) |
+| `F2` | check cluster state |
+| `F11` | zoom the Lab Shell |
+| `F10` | leave |
+
+```sh
+kubecrypt              # help
+kubecrypt status       # track, current lab, completion, cluster
+kubecrypt reset        # restore the current lab only
+kubecrypt destroy      # delete the kind cluster; keep progress
 kubecrypt destroy --all
 ```
 
-`kubecrypt` with no arguments prints help. `lab try test-lab.yaml` validates a
-lab from `contribute/` and starts it without writing `./curriculum`.
-`lab publish test-lab.yaml` installs that file into `./curriculum` and starts
-it. Neither rebuilds the binary. `reset` restores the current lab
-only. `destroy` removes the cluster and keeps progress; `destroy --all` also
-clears learner data. Destructive commands require confirmation; scripts must
-pass `--force`.
+`reset` and `destroy` ask for confirmation. Scripts must pass `--force`.
 
-## Safety model
+`start` reads the curriculum compiled into the binary. Editing YAML on disk
+does not change `start` until you rebuild (`make install`).
 
-KubeCrypt writes a dedicated kubeconfig under your OS user configuration
-directory. Its own mutating and destructive operations verify the API server,
-CA fingerprint, cluster name, and an ownership marker before proceeding.
-KubeCrypt never reads or grades shell history.
+## Author a lab
 
-## Scenario packs
-
-Scenarios are declarative YAML and cannot execute arbitrary host commands.
-Each pack contains a `catalog.yaml`, scenario definitions, and any referenced
-Kubernetes manifests. New modules should start from
-[`contribute/`](contribute/). Validate a pack before using or contributing it:
+`lab try` and `lab publish` only work from a checkout of this repository, with
+a file in `contribute/`. They are not available as a way to load extra packs
+into an installed binary.
 
 ```sh
-make validate-pack PACK=path/to/pack
+kubecrypt lab try test-lab.yaml      # validate and run; does not write curriculum/
+kubecrypt lab publish test-lab.yaml  # copy into curriculum/ and catalog.yaml
 ```
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) and [SECURITY.md](SECURITY.md).
+See [contribute/README.md](contribute/README.md).
+
+## Safety
+
+KubeCrypt writes its own kubeconfig under your OS user config directory. Before
+it mutates or destroys a cluster it checks API server, CA fingerprint, cluster
+name, and an ownership marker. It never grades shell history. The Lab Shell is
+your real shell; it is not a sandbox.
+
+## Contributing
+
+Engine and curriculum notes: [CONTRIBUTING.md](docs/CONTRIBUTING.md).
+Security: [SECURITY.md](docs/SECURITY.md).
