@@ -131,6 +131,13 @@ func (a *app) clusterManager() (*cluster.Manager, error) {
 	return manager, nil
 }
 
+func (a *app) output() io.Writer {
+	if a.out != nil {
+		return a.out
+	}
+	return os.Stdout
+}
+
 func (a *app) doctorCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "doctor",
@@ -140,8 +147,9 @@ func (a *app) doctorCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintln(cmd.ErrOrStderr(), "Installing pinned kind and kubectl...")
-			if err := cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions()); err != nil {
+			if err := waitFor(cmd.OutOrStdout(), "Installing kind and kubectl", func() error {
+				return cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions())
+			}); err != nil {
 				return err
 			}
 			failed := false
@@ -349,7 +357,10 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 	if err != nil {
 		return err
 	}
-	if _, err := manager.EnsureCluster(cmd.Context()); err != nil {
+	if err := waitFor(cmd.OutOrStdout(), "Preparing training cluster", func() error {
+		_, err := manager.EnsureCluster(cmd.Context())
+		return err
+	}); err != nil {
 		return err
 	}
 	registry, err := a.registry()
@@ -365,7 +376,9 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 	if err != nil {
 		return err
 	}
-	if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
+	if err := waitFor(cmd.OutOrStdout(), "Preparing "+scenario.Title, func() error {
+		return a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID))
+	}); err != nil {
 		return err
 	}
 	if prepareOnly {
@@ -470,7 +483,9 @@ func (a *app) resetCommand() *cobra.Command {
 			if _, err := manager.VerifyOwnership(cmd.Context()); err != nil {
 				return fmt.Errorf("run kubecrypt start before resetting a lab: %w", err)
 			}
-			if err := restoreLabCluster(cmd.Context(), scenario, registry, manager); err != nil {
+			if err := waitFor(cmd.OutOrStdout(), "Resetting "+scenario.Title, func() error {
+				return restoreLabCluster(cmd.Context(), scenario, registry, manager)
+			}); err != nil {
 				return err
 			}
 			if err := store.ResetScenarioProgress(scenario.ID); err != nil {
@@ -502,7 +517,9 @@ func (a *app) destroyCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := manager.Destroy(cmd.Context()); err != nil {
+			if err := waitFor(cmd.OutOrStdout(), "Destroying training cluster", func() error {
+				return manager.Destroy(cmd.Context())
+			}); err != nil {
 				return err
 			}
 			if all {
@@ -594,7 +611,9 @@ func (a *app) runTrainingSession(ctx context.Context, scenario *curriculum.Scena
 		if next == nil {
 			return nil
 		}
-		if err := a.enterScenario(ctx, next, registry, manager, store, true); err != nil {
+		if err := waitFor(a.output(), "Preparing "+next.Title, func() error {
+			return a.enterScenario(ctx, next, registry, manager, store, true)
+		}); err != nil {
 			return err
 		}
 		scenario = next
@@ -931,13 +950,4 @@ func (a *app) confirm(cmd *cobra.Command, force bool, prompt string) error {
 		return errors.New("operation cancelled")
 	}
 	return nil
-}
-
-func readerIsTerminal(reader io.Reader) bool {
-	file, ok := reader.(*os.File)
-	if !ok {
-		return false
-	}
-	info, err := file.Stat()
-	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
