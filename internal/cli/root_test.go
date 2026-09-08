@@ -59,7 +59,7 @@ func TestRootUsesNeutralCommands(t *testing.T) {
 			t.Errorf("missing command %q", expected)
 		}
 	}
-	for _, removed := range []string{"setup", "resume", "check", "hint", "objective", "completion", "help", "check-in", "checkout", "lesson"} {
+	for _, removed := range []string{"setup", "resume", "check", "hint", "objective", "completion", "help", "check-in", "checkout", "lesson", "pack"} {
 		if names[removed] {
 			t.Errorf("removed command %q is still visible", removed)
 		}
@@ -348,6 +348,47 @@ func TestLabPublishIsVisible(t *testing.T) {
 	}
 	if lab.Hidden || lab.Name() != "publish" {
 		t.Fatalf("lab publish hidden=%v name=%q", lab.Hidden, lab.Name())
+	}
+}
+
+func TestLabValidateIsVisible(t *testing.T) {
+	a := &app{in: strings.NewReader(""), out: &bytes.Buffer{}, err: &bytes.Buffer{}}
+	root := a.rootCommand()
+	lab, _, err := root.Find([]string{"lab", "validate"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lab.Hidden || lab.Name() != "validate" {
+		t.Fatalf("lab validate hidden=%v name=%q", lab.Hidden, lab.Name())
+	}
+}
+
+func TestLabValidateAcceptsMaterializedDraft(t *testing.T) {
+	source := writeCLITryLab(t, t.TempDir(), "draft.yaml")
+	packDir := t.TempDir()
+	if _, err := curriculum.MaterializeDraft(source, packDir); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "validate", packDir})
+	if err := root.ExecuteContext(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	got := output.String()
+	if !strings.Contains(got, "validated draft (1 lab)") {
+		t.Fatalf("lab validate output = %q", got)
+	}
+}
+
+func TestLabValidateRejectsMissingDirectory(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "validate", filepath.Join(t.TempDir(), "missing")})
+	if err := root.ExecuteContext(context.Background()); err == nil {
+		t.Fatal("lab validate missing dir should fail")
 	}
 }
 

@@ -246,7 +246,7 @@ func TestValidateCatalogRejectsUnsafePath(t *testing.T) {
 	}
 }
 
-func TestValidatePackRejectsEscapingSymlink(t *testing.T) {
+func TestValidateLabsRejectsEscapingSymlink(t *testing.T) {
 	packDir := t.TempDir()
 	outside := filepath.Join(t.TempDir(), "scenario.yaml")
 	if err := os.WriteFile(outside, []byte("not a scenario"), 0o600); err != nil {
@@ -266,8 +266,8 @@ func TestValidatePackRejectsEscapingSymlink(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(packDir, "catalog.yaml"), catalogData, 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := ValidatePack(packDir); err == nil {
-		t.Fatal("ValidatePack() accepted a scenario symlink outside the pack")
+	if _, err := ValidateLabs(packDir); err == nil {
+		t.Fatal("ValidateLabs() accepted a scenario symlink outside the pack")
 	}
 }
 

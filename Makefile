@@ -1,4 +1,4 @@
-.PHONY: build snapshot test test-integration lint install validate-pack
+.PHONY: build snapshot test test-integration lint install validate-lab ci
 
 LDFLAGS := -X github.com/YakShavingCatHerder/kubecrypt/internal/cli.Version=dev
 GOBIN := $(shell go env GOBIN)
@@ -34,7 +34,16 @@ lint:
 	gofmt -w $$(find cmd internal tests curriculum -name '*.go' -type f 2>/dev/null)
 	go vet ./...
 
-PACK ?= curriculum
+CURRICULUM ?= curriculum
 
-validate-pack: build
-	./bin/kubecrypt pack validate "$(PACK)"
+validate-lab:
+	go build -ldflags="$(LDFLAGS)" -o bin/kubecrypt ./cmd/kubecrypt
+	./bin/kubecrypt lab validate "$(CURRICULUM)"
+
+# Matches the GitHub unit job (not the kind integration job).
+ci:
+	test -z "$$(gofmt -l .)"
+	go mod tidy -diff
+	go vet ./...
+	$(MAKE) validate-lab
+	go test -race ./...

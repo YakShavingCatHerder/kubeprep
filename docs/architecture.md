@@ -17,7 +17,7 @@ context.
 
 | Package | Owns |
 | --- | --- |
-| `internal/curriculum` | schema, pack load, `lab try` / `publish` |
+| `internal/curriculum` | schema, pack load, `lab try` / `publish` / `validate` |
 | `internal/cluster` | doctor, kind, kubeconfig, ownership |
 | `internal/validator` | observed cluster state |
 | `internal/game` | profile and progress files |

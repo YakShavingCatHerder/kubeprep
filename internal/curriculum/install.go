@@ -55,7 +55,7 @@ func MaterializeDraft(sourceFile, packDir string) (LabInstall, error) {
 	if err := writeCatalogFile(filepath.Join(packDir, "catalog.yaml"), catalog); err != nil {
 		return LabInstall{}, fmt.Errorf("write catalog: %w", err)
 	}
-	if _, err := ValidatePack(packDir); err != nil {
+	if _, err := ValidateLabs(packDir); err != nil {
 		return LabInstall{}, err
 	}
 	return install, nil
@@ -87,7 +87,7 @@ func InstallLab(sourceFile, packDir string) (LabInstall, error) {
 	if err := writeCatalogFile(catalogPath, catalog); err != nil {
 		return LabInstall{}, fmt.Errorf("write catalog: %w", err)
 	}
-	if _, err := ValidatePack(packDir); err != nil {
+	if _, err := ValidateLabs(packDir); err != nil {
 		return LabInstall{}, err
 	}
 	return install, nil

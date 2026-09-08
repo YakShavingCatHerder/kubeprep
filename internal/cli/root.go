@@ -59,7 +59,6 @@ func (a *app) rootCommand() *cobra.Command {
 		a.statusCommand(),
 		a.resetCommand(),
 		a.destroyCommand(),
-		a.packCommand(),
 	)
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{
@@ -183,13 +182,13 @@ func (a *app) startCommand() *cobra.Command {
 func (a *app) labCommand() *cobra.Command {
 	lab := &cobra.Command{
 		Use:   "lab",
-		Short: "Try or publish labs from contribute/",
+		Short: "Try, publish, or validate labs",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}
-	lab.AddCommand(a.labTryCommand(), a.labPublishCommand())
+	lab.AddCommand(a.labTryCommand(), a.labPublishCommand(), a.labValidateCommand())
 	return lab
 }
 
@@ -246,6 +245,31 @@ func (a *app) labPublishCommand() *cobra.Command {
 	command.Flags().StringVar(&track, "track", "", "learning track: beginner, cka, or ckad")
 	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
 	return command
+}
+
+func (a *app) labValidateCommand() *cobra.Command {
+	return &cobra.Command{
+		Use:   "validate [directory]",
+		Short: "Validate labs in a curriculum directory",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			dir := liveCurriculumDir
+			if len(args) == 1 {
+				dir = args[0]
+			}
+			catalog, err := curriculum.ValidateLabs(dir)
+			if err != nil {
+				return err
+			}
+			count := len(catalog.ScenarioIDs())
+			noun := "lab"
+			if count != 1 {
+				noun = "labs"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "validated %s (%d %s)\n", catalog.Name, count, noun)
+			return nil
+		},
+	}
 }
 
 const liveCurriculumDir = "curriculum"
@@ -499,28 +523,6 @@ func (a *app) destroyCommand() *cobra.Command {
 	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive destroy")
 	command.Flags().BoolVar(&all, "all", false, "also clear learner progress")
 	return command
-}
-
-func (a *app) packCommand() *cobra.Command {
-	pack := &cobra.Command{
-		Use:    "pack",
-		Short:  "Scenario-pack authoring tools",
-		Hidden: true,
-	}
-	pack.AddCommand(&cobra.Command{
-		Use:   "validate <directory>",
-		Short: "Validate a local scenario pack",
-		Args:  cobra.ExactArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
-			catalog, err := curriculum.ValidatePack(args[0])
-			if err != nil {
-				return err
-			}
-			fmt.Fprintf(cmd.OutOrStdout(), "valid pack: %s (%d scenarios)\n", catalog.Name, len(catalog.ScenarioIDs()))
-			return nil
-		},
-	})
-	return pack
 }
 
 func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, requestedTrack string) (game.Profile, error) {
