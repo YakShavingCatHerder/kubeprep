@@ -58,9 +58,9 @@ func (m *Manager) Paths() Paths {
 	return m.paths
 }
 
-// CheckIn idempotently creates the dedicated cluster or verifies the identity
-// of an existing cluster. It never reads or changes the global kubeconfig.
-func (m *Manager) CheckIn(ctx context.Context) (Identity, error) {
+// EnsureCluster idempotently creates the dedicated cluster or verifies the
+// identity of an existing cluster. It never reads or changes the global kubeconfig.
+func (m *Manager) EnsureCluster(ctx context.Context) (Identity, error) {
 	if err := m.paths.ensureDirectory(); err != nil {
 		return Identity{}, err
 	}

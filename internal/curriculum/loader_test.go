@@ -183,31 +183,6 @@ func TestRegistryLoadsLocalPack(t *testing.T) {
 	}
 }
 
-func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
-	packDir := t.TempDir()
-	scenarioData, err := yaml.Marshal(validScenario())
-	if err != nil {
-		t.Fatal(err)
-	}
-	for name, file := range packFS(scenarioData) {
-		dest := filepath.Join(packDir, filepath.FromSlash(name))
-		if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
-			t.Fatal(err)
-		}
-		if err := os.WriteFile(dest, file.Data, 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	registry, err := NewRegistry(packDir)
-	if err != nil {
-		t.Fatal(err)
-	}
-	ids := registry.ScenarioIDs()
-	if got := strings.Join(ids, ","); got != "pod-creation,test-scenario" {
-		t.Fatalf("scenario order = %s", got)
-	}
-}
-
 func TestNewRegistryFromDirectoryOmitsEmbeddedCore(t *testing.T) {
 	packDir := t.TempDir()
 	scenarioData, err := yaml.Marshal(validScenario())
@@ -312,7 +287,8 @@ func TestValidateScenario(t *testing.T) {
 		{"inverted Kubernetes range", func(s *Scenario) { s.Kubernetes.Min = "1.36" }, "newer than"},
 		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubecrypt-*"},
 		{"challenge without start state", func(s *Scenario) { s.Setup.Manifests = nil; s.Reset.Manifests = nil }, "must contain at least one manifest"},
-		{"orientation mode is removed", func(s *Scenario) { s.Mode = "orientation" }, "want challenge"},
+		{"mode must be challenge", func(s *Scenario) { s.Mode = "orientation" }, "want challenge"},
+		{"unimplemented check type", func(s *Scenario) { s.Checks[0].Type = "serviceReachable" }, "unsupported check"},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

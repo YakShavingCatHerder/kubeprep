@@ -121,13 +121,6 @@ func (a *app) registry() (*curriculum.Registry, error) {
 	return curriculum.NewRegistry()
 }
 
-func (a *app) packDirectories() []string {
-	if a.livePackDir == "" {
-		return nil
-	}
-	return []string{a.livePackDir}
-}
-
 func (a *app) clusterManager() (*cluster.Manager, error) {
 	manager, err := cluster.NewManager(cluster.ExecRunner{})
 	if err != nil {
@@ -332,7 +325,7 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 	if err != nil {
 		return err
 	}
-	if _, err := manager.CheckIn(cmd.Context()); err != nil {
+	if _, err := manager.EnsureCluster(cmd.Context()); err != nil {
 		return err
 	}
 	registry, err := a.registry()
@@ -645,7 +638,6 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Debrief:             strings.TrimSpace(scenario.Debrief.Explanation),
 		Kubeconfig:          manager.Paths().Kubeconfig,
 		ToolBinDir:          manager.Paths().BinDir(),
-		PackDirectories:     a.packDirectories(),
 		ObserveWhileRunning: observeDelay > 0,
 		ObserveDelay:        observeDelay,
 		HasNext:             next != nil,

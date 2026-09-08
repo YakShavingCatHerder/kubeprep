@@ -12,8 +12,7 @@ func TestScopedEnvironmentReplacesSensitiveValues(t *testing.T) {
 		[]string{"PATH=/bin", "KUBECONFIG=/unsafe", "KUBECRYPT_SCENARIO=old", "TERM=dumb"},
 		map[string]string{
 			"KUBECONFIG":         "/safe/config",
-			"KUBECRYPT_SCENARIO": "cluster-components",
-			"KUBECRYPT_PACKS":    "/packs/one:/packs/two",
+			"KUBECRYPT_SCENARIO": "pod-creation",
 			"TERM":               "xterm-256color",
 		},
 	)
@@ -27,8 +26,7 @@ func TestScopedEnvironmentReplacesSensitiveValues(t *testing.T) {
 	for _, want := range []string{
 		"PATH=/bin",
 		"KUBECONFIG=/safe/config",
-		"KUBECRYPT_SCENARIO=cluster-components",
-		"KUBECRYPT_PACKS=/packs/one:/packs/two",
+		"KUBECRYPT_SCENARIO=pod-creation",
 		"TERM=xterm-256color",
 	} {
 		if !slices.Contains(got, want) {

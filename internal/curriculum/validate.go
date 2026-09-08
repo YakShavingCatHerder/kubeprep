@@ -17,14 +17,8 @@ var (
 )
 
 var allowedCheckTypes = map[CheckType]struct{}{
-	CheckObjectExists: {}, CheckObjectDoesNotExist: {}, CheckFieldEquals: {},
-	CheckFieldContains: {}, CheckPodReady: {}, CheckDeploymentAvailable: {},
-	CheckReplicaCount: {}, CheckLabelExists: {}, CheckNodeScheduled: {},
-	CheckServiceReachable: {}, CheckDNSResolvable: {}, CheckPVBound: {},
-	CheckPVCBound: {}, CheckFileExistsInVolume: {}, CheckHTTPResponse: {},
-	CheckRBACAllows: {}, CheckRBACDenies: {}, CheckLogsContain: {},
-	CheckConditionEquals: {}, CheckContainerImageEquals: {}, CheckRestartCountBelow: {},
-	CheckContainersHealthy: {}, CheckNodeTopology: {},
+	CheckObjectExists: {}, CheckFieldEquals: {}, CheckPodReady: {},
+	CheckDeploymentAvailable: {}, CheckContainersHealthy: {}, CheckNodeTopology: {},
 }
 
 // Validate checks a scenario independently of where its manifest files live.
@@ -121,14 +115,12 @@ func Validate(scenario *Scenario) error {
 				*check.ControlPlanes+*check.Workers != *check.Count {
 				return fmt.Errorf("checks[%d]: node topology counts are inconsistent", i)
 			}
-		case CheckObjectExists, CheckObjectDoesNotExist, CheckFieldEquals, CheckFieldContains:
+		case CheckObjectExists, CheckFieldEquals:
 			if strings.TrimSpace(check.Kind) == "" || strings.TrimSpace(check.Name) == "" {
 				return fmt.Errorf("checks[%d]: kind and name must not be empty", i)
 			}
-			if check.Type == CheckFieldEquals || check.Type == CheckFieldContains {
-				if strings.TrimSpace(check.Field) == "" {
-					return fmt.Errorf("checks[%d].field: must not be empty", i)
-				}
+			if check.Type == CheckFieldEquals && strings.TrimSpace(check.Field) == "" {
+				return fmt.Errorf("checks[%d].field: must not be empty", i)
 			}
 		default:
 			if strings.TrimSpace(check.Name) == "" {

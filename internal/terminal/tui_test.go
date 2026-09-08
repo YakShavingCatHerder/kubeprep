@@ -114,7 +114,7 @@ func TestScenarioViewRequiresExplicitCheck(t *testing.T) {
 	}
 }
 
-func TestOrientationObservesClusterOnTick(t *testing.T) {
+func TestObserveWhileRunningChecksOnTick(t *testing.T) {
 	model := scenarioViewModel{
 		ctx: context.Background(),
 		scenario: ScenarioView{
@@ -128,11 +128,11 @@ func TestOrientationObservesClusterOnTick(t *testing.T) {
 	next, command := model.Update(observeTickMsg{})
 	got := next.(scenarioViewModel)
 	if !got.checking || command == nil {
-		t.Fatal("orientation did not start observation on tick")
+		t.Fatal("observe tick did not start a check")
 	}
 }
 
-func TestOrientationWaitsBeforeAutomaticCheck(t *testing.T) {
+func TestObserveDelayWaitsBeforeAutomaticCheck(t *testing.T) {
 	called := false
 	now := time.Date(2026, 9, 4, 12, 0, 0, 0, time.UTC)
 	model := scenarioViewModel{
@@ -202,20 +202,20 @@ func TestScenarioViewKeepsShellVisibleAfterSuccess(t *testing.T) {
 		width:  120,
 		height: 40,
 		scenario: ScenarioView{
-			ScenarioID: "cluster-components",
-			Module:     "orientation",
-			Title:      "Cluster Components",
+			ScenarioID: "pod-creation",
+			Module:     "pods",
+			Title:      "First API Object",
 			HasNext:    true,
-			NextTitle:  "Cluster Components",
-			Completion: "You identified the control-plane components.",
-			Debrief:    "The API server is the cluster interface.",
+			NextTitle:  "First API Object",
+			Completion: "Pod nginx exists in kubecrypt-beginner.",
+			Debrief:    "The API server stored the Pod object.",
 		},
 		lab:           &memoryLab{view: "kubectl get nodes"},
 		state:         CheckSuccess,
 		advancePrompt: true,
 	}
 	view := model.View()
-	for _, text := range []string{"SCENARIO COMPLETED", "LAB SHELL", "kubectl get nodes", "EXPLANATION", "CONTINUE", "Cluster Components"} {
+	for _, text := range []string{"SCENARIO COMPLETED", "LAB SHELL", "kubectl get nodes", "EXPLANATION", "CONTINUE", "First API Object"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("success view does not contain %q", text)
 		}
@@ -228,7 +228,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 		height: 36,
 		scenario: ScenarioView{
 			ScenarioID: "test-scenario",
-			Module:     "orientation",
+			Module:     "pods",
 			Experience: "beginner",
 			Title:      "Test Scenario",
 			Objective:  "Inspect the cluster.",

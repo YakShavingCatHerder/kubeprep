@@ -50,29 +50,12 @@ type ResourceSet struct {
 type CheckType string
 
 const (
-	CheckObjectExists         CheckType = "objectExists"
-	CheckObjectDoesNotExist   CheckType = "objectDoesNotExist"
-	CheckFieldEquals          CheckType = "fieldEquals"
-	CheckFieldContains        CheckType = "fieldContains"
-	CheckPodReady             CheckType = "podReady"
-	CheckDeploymentAvailable  CheckType = "deploymentAvailable"
-	CheckReplicaCount         CheckType = "replicaCount"
-	CheckLabelExists          CheckType = "labelExists"
-	CheckNodeScheduled        CheckType = "nodeScheduled"
-	CheckServiceReachable     CheckType = "serviceReachable"
-	CheckDNSResolvable        CheckType = "dnsResolvable"
-	CheckPVBound              CheckType = "pvBound"
-	CheckPVCBound             CheckType = "pvcBound"
-	CheckFileExistsInVolume   CheckType = "fileExistsInVolume"
-	CheckHTTPResponse         CheckType = "httpResponse"
-	CheckRBACAllows           CheckType = "rbacAllows"
-	CheckRBACDenies           CheckType = "rbacDenies"
-	CheckLogsContain          CheckType = "logsContain"
-	CheckConditionEquals      CheckType = "conditionEquals"
-	CheckContainerImageEquals CheckType = "containerImageEquals"
-	CheckRestartCountBelow    CheckType = "restartCountBelow"
-	CheckContainersHealthy    CheckType = "containersHealthy"
-	CheckNodeTopology         CheckType = "nodeTopology"
+	CheckObjectExists        CheckType = "objectExists"
+	CheckFieldEquals         CheckType = "fieldEquals"
+	CheckPodReady            CheckType = "podReady"
+	CheckDeploymentAvailable CheckType = "deploymentAvailable"
+	CheckContainersHealthy   CheckType = "containersHealthy"
+	CheckNodeTopology        CheckType = "nodeTopology"
 )
 
 // Check is a typed state observation. Optional fields are interpreted by the
