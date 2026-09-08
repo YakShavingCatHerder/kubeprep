@@ -24,16 +24,12 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   deterministic reset data. Labs that need the cluster to settle may set
   `observeDelay` (for example `60s`) to pause the first automatic check.
 - Add the lab id under the right path and section in `curriculum/catalog.yaml`.
-- Sync the embedded copy with `make bundle-lesson pods/pod-creation`.
-  That checks the catalog lab id and copies both the scenario and
-  `catalog.yaml`. Tests reject drift between `curriculum/` and
-  `internal/curriculum/bundled/`.
+- Run `make validate-pack`. The binary embeds `curriculum/` at compile time.
 - Do not include host shell commands, privileged workloads, host namespaces,
   or `hostPath` volumes.
-- Run `make validate-pack`.
 - Add a scenario test proving the initial state, target state, and
   reset behavior.
 
 Local packs can be loaded with `kubecrypt --pack <directory> start`. Scenario
 IDs must be unique across all active packs. All contributions are reviewed
-before they become bundled trusted curriculum.
+before they become core curriculum.

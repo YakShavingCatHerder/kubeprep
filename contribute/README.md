@@ -7,8 +7,8 @@ typed, so any legitimate `kubectl` path can pass.
 You do not need to write Go.
 
 This directory is a scratch workspace. `kubecrypt start` does not load it. A
-lab reaches learners when it is published under `curriculum/` and bundled into
-the binary.
+lab reaches learners when it is published under `curriculum/`. That directory
+is the core pack; the binary embeds it at compile time.
 
 ## Write one file
 
@@ -42,28 +42,24 @@ kubecrypt --pack ./my-pack start
 ```
 
 Do not point a catalog at this `contribute/` directory. Lab ids must be
-unique across the bundled pack and every `--pack` you load.
+unique across the core pack and every `--pack` you load.
 
 ## Publish into core
 
 Canonical labs live at `curriculum/{section}/{id}.yaml`. The binary embeds
-`internal/curriculum/bundled/`. Tests require those two trees to match.
+that tree. There is no second copy to sync.
 
 1. Write the lab under `curriculum/{section}/`.
 2. Add the id under the right path and section in `curriculum/catalog.yaml`.
    The same id can appear on more than one path; it is still one file.
-3. Sync the embedded copy:
-
-   ```sh
-   make bundle-lesson pods/pod-creation
-   ```
-
-   That fails if the catalog does not list the id. When it succeeds, it
-   copies the lab file and `catalog.yaml`.
-4. Run `make validate-pack`.
-5. Add a test that setup succeeds, the start is incomplete or broken, the
+3. Run `make validate-pack`.
+4. Add a test that setup succeeds, the start is incomplete or broken, the
    target state is accepted, and reset restores the start. Prove one
    alternate valid fix when you can.
+
+`kubecrypt --pack ./curriculum start` runs the pack without rebuilding.
+`make install` is only needed when you want the lab inside a plain
+`kubecrypt start`.
 
 ## Catalog shape
 

@@ -7,7 +7,7 @@ KubeCrypt separates scenario intent from where a scenario runs.
 The `kubecrypt` process owns:
 
 - learner onboarding and progress,
-- bundled and local scenario-pack loading,
+- core and local scenario-pack loading,
 - KubeCrypt cluster lifecycle,
 - state validation,
 - the Bubble Tea scenario view with a permanent split: scenario pane plus a

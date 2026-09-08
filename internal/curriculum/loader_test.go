@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
+func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
 	registry, err := NewRegistry()
 	if err != nil {
 		t.Fatal(err)
@@ -131,26 +131,6 @@ func TestParseObserveDelay(t *testing.T) {
 	}
 	if _, err := ParseObserveDelay("later"); err == nil {
 		t.Fatal("expected invalid duration error")
-	}
-}
-
-func TestBundledAssetsMatchCanonicalCurriculum(t *testing.T) {
-	files := []string{
-		"catalog.yaml",
-		"pods/pod-creation.yaml",
-	}
-	for _, name := range files {
-		canonical, err := os.ReadFile(filepath.Join("..", "..", "curriculum", filepath.FromSlash(name)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		bundled, err := bundledFiles.ReadFile("bundled/" + name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(canonical, bundled) {
-			t.Errorf("bundled %s differs from canonical pack", name)
-		}
 	}
 }
 
