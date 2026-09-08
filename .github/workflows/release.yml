@@ -19,6 +19,7 @@ jobs:
         with:
           go-version-file: go.mod
           cache: true
+      - run: go run ./cmd/checkreleasetag "${GITHUB_REF_NAME}"
       - run: make ci
       - uses: goreleaser/goreleaser-action@v6
         with:

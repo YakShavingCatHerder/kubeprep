@@ -1,4 +1,4 @@
-.PHONY: build snapshot test test-integration lint install validate-lab demo ci
+.PHONY: build snapshot test test-integration lint install validate-lab demo check-release-tag ci
 
 LDFLAGS := -X github.com/YakShavingCatHerder/kubeprep/internal/cli.Version=dev
 GOBIN := $(shell go env GOBIN)
@@ -44,6 +44,10 @@ validate-lab:
 demo: build
 	./bin/kubeprep start --track=beginner --prepare-only
 	vhs docs/demo.tape
+
+# TAG=v0.1.5 make check-release-tag
+check-release-tag:
+	go run ./cmd/checkreleasetag "$(TAG)"
 
 # Matches the GitHub unit job (not the kind integration job).
 ci:
