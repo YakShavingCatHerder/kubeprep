@@ -48,3 +48,8 @@ cluster-ownership.json
 .DS_Store
 ._*
 Thumbs.db
+
+# Draft labs. Keep the template and authoring docs.
+/contribute/*
+!/contribute/README.md
+!/contribute/example-module.yaml
