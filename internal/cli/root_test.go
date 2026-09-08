@@ -265,9 +265,6 @@ func TestLabTryRequiresLabFile(t *testing.T) {
 
 func TestLabTryRejectsMissingFile(t *testing.T) {
 	t.Chdir(t.TempDir())
-	if err := os.Mkdir("curriculum", 0o700); err != nil {
-		t.Fatal(err)
-	}
 	var output bytes.Buffer
 	a := &app{in: strings.NewReader(""), out: &output, err: &output}
 	root := a.rootCommand()
@@ -275,6 +272,35 @@ func TestLabTryRejectsMissingFile(t *testing.T) {
 	err := root.ExecuteContext(context.Background())
 	if err == nil {
 		t.Fatal("lab try missing.yaml should fail")
+	}
+	if strings.Contains(err.Error(), "curriculum") {
+		t.Fatalf("lab try should not require curriculum/: %v", err)
+	}
+}
+
+func TestLabPublishRequiresCurriculum(t *testing.T) {
+	t.Chdir(t.TempDir())
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "publish", "missing.yaml", "--track=beginner", "--prepare-only"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil {
+		t.Fatal("lab publish without curriculum/ should fail")
+	}
+	if !strings.Contains(err.Error(), "curriculum") {
+		t.Fatalf("lab publish error = %v", err)
+	}
+}
+
+func TestLabPublishRequiresLabFile(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "publish"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil {
+		t.Fatal("lab publish without a file should fail")
 	}
 }
 
@@ -311,4 +337,107 @@ func TestLabTryIsVisible(t *testing.T) {
 	if lab.Hidden || lab.Name() != "try" {
 		t.Fatalf("lab try hidden=%v name=%q", lab.Hidden, lab.Name())
 	}
+}
+
+func TestLabPublishIsVisible(t *testing.T) {
+	a := &app{in: strings.NewReader(""), out: &bytes.Buffer{}, err: &bytes.Buffer{}}
+	root := a.rootCommand()
+	lab, _, err := root.Find([]string{"lab", "publish"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lab.Hidden || lab.Name() != "publish" {
+		t.Fatalf("lab publish hidden=%v name=%q", lab.Hidden, lab.Name())
+	}
+}
+
+func TestPrepareTryDoesNotWriteCurriculum(t *testing.T) {
+	repo := t.TempDir()
+	t.Chdir(repo)
+	if err := os.Mkdir("curriculum", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	marker := []byte("do-not-touch\n")
+	if err := os.WriteFile(filepath.Join("curriculum", "catalog.yaml"), marker, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	source := writeCLITryLab(t, t.TempDir(), "draft.yaml")
+	a := &app{}
+	cleanup, err := a.prepareTry(source)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cleanup()
+	got, err := os.ReadFile(filepath.Join("curriculum", "catalog.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != string(marker) {
+		t.Fatalf("try mutated curriculum catalog:\n%s", got)
+	}
+	if _, err := os.Stat(filepath.Join("curriculum", "workloads")); !os.IsNotExist(err) {
+		t.Fatalf("try wrote curriculum/workloads: %v", err)
+	}
+	if a.livePackDir == "" || a.livePackDir == liveCurriculumDir {
+		t.Fatalf("livePackDir = %q", a.livePackDir)
+	}
+	if a.targetLabID != "test-scenario" {
+		t.Fatalf("targetLabID = %q", a.targetLabID)
+	}
+	if !a.preview {
+		t.Fatal("preview should be set")
+	}
+	if _, err := os.Stat(filepath.Join(a.livePackDir, "workloads", "test-scenario.yaml")); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func writeCLITryLab(t *testing.T, dir, name string) string {
+	t.Helper()
+	if err := os.MkdirAll(dir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	filename := filepath.Join(dir, name)
+	const body = `authoring:
+  section: workloads
+apiVersion: kubecrypt.io/v1alpha1
+id: test-scenario
+mode: challenge
+title: Test Scenario
+description: Restore the workload.
+revision: 2026-09
+module: workloads
+namespace: kubecrypt-test
+difficulty: 1
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+tracks:
+  - beginner
+  - cka
+  - ckad
+objective: Make the workload available.
+concepts:
+  - pods
+setup:
+  manifests: []
+checks:
+  - type: objectExists
+    kind: pod
+    namespace: kubecrypt-test
+    name: nginx
+hints:
+  - conceptual
+  - procedural
+  - explicit
+completion: The workload is available.
+debrief:
+  explanation: The Pod exists.
+reset:
+  manifests: []
+`
+	if err := os.WriteFile(filename, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return filename
 }

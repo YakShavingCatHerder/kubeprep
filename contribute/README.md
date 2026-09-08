@@ -41,19 +41,26 @@ kubecrypt lab try test-lab.yaml
 
 Pass the filename inside `contribute/`. Do not prefix `contribute/`.
 
-That validates the file, copies it to `curriculum/{section}/{id}.yaml`, lists
-the id in `catalog.yaml` under the lab's tracks, validates the pack, and
-starts that lab from disk. You do not rebuild. `kubecrypt start` uses the
-copy embedded at compile time.
+That validates the file, checks sidecar manifests, builds a one-lab overlay
+pack in a temp directory, and starts that lab. It does not write
+`curriculum/` or `catalog.yaml`. You do not rebuild. Learner progress for
+other labs is left in place.
 
 Do not point a catalog at this `contribute/` directory. Lab ids must be unique
 across the pack.
 
 ## Publish into core
 
-`kubecrypt lab try test-lab.yaml` writes `curriculum/{section}/{id}.yaml`
-and lists the id in `catalog.yaml`. The binary embeds that tree. There is no
-second copy to sync.
+When the draft is ready:
+
+```sh
+kubecrypt lab publish test-lab.yaml
+```
+
+That writes `curriculum/{section}/{id}.yaml` and lists the id in
+`catalog.yaml` under the lab's tracks, then validates the pack and starts
+that lab from disk. The binary embeds that tree. There is no second copy to
+sync.
 
 Add a test that setup succeeds, the start is incomplete or broken, the target
 state is accepted, and reset restores the start. Prove one alternate valid

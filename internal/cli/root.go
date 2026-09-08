@@ -28,6 +28,7 @@ type app struct {
 	err         io.Writer
 	livePackDir string
 	targetLabID string
+	preview     bool
 }
 
 func Execute() error {
@@ -189,13 +190,13 @@ func (a *app) startCommand() *cobra.Command {
 func (a *app) labCommand() *cobra.Command {
 	lab := &cobra.Command{
 		Use:   "lab",
-		Short: "Try labs from the local curriculum pack",
+		Short: "Try or publish labs from contribute/",
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			return cmd.Help()
 		},
 	}
-	lab.AddCommand(a.labTryCommand())
+	lab.AddCommand(a.labTryCommand(), a.labPublishCommand())
 	return lab
 }
 
@@ -204,6 +205,32 @@ func (a *app) labTryCommand() *cobra.Command {
 	var prepareOnly bool
 	command := &cobra.Command{
 		Use:   "try <file>",
+		Short: "Validate a contribute/ lab YAML and start it without publishing",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			source, err := resolveContributeLab(args[0])
+			if err != nil {
+				return err
+			}
+			cleanup, err := a.prepareTry(source)
+			if err != nil {
+				return err
+			}
+			defer cleanup()
+			fmt.Fprintf(cmd.OutOrStdout(), "validated %s (%s)\n", source, a.targetLabID)
+			return a.runStart(cmd, track, prepareOnly)
+		},
+	}
+	command.Flags().StringVar(&track, "track", "", "learning track: beginner, cka, or ckad")
+	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
+	return command
+}
+
+func (a *app) labPublishCommand() *cobra.Command {
+	var track string
+	var prepareOnly bool
+	command := &cobra.Command{
+		Use:   "publish <file>",
 		Short: "Install a contribute/ lab YAML into ./curriculum and start it",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -218,7 +245,7 @@ func (a *app) labTryCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "installed %s -> %s\n", source, install.Path)
+			fmt.Fprintf(cmd.OutOrStdout(), "published %s -> %s\n", source, install.Path)
 			a.targetLabID = install.ID
 			return a.runStart(cmd, track, prepareOnly)
 		},
@@ -234,35 +261,52 @@ const contributeDir = "contribute"
 func resolveContributeLab(name string) (string, error) {
 	name = strings.TrimSpace(name)
 	if name == "" {
-		return "", fmt.Errorf("lab try: file is required")
+		return "", fmt.Errorf("lab: file is required")
 	}
 	if filepath.IsAbs(name) {
-		return "", fmt.Errorf("lab try: pass a filename inside contribute/, not an absolute path")
+		return "", fmt.Errorf("lab: pass a filename inside contribute/, not an absolute path")
 	}
 	clean := filepath.ToSlash(filepath.Clean(name))
 	clean = strings.TrimPrefix(clean, "./")
 	if clean == contributeDir {
-		return "", fmt.Errorf("lab try: pass a filename inside contribute/")
+		return "", fmt.Errorf("lab: pass a filename inside contribute/")
 	}
 	if prefix := contributeDir + "/"; strings.HasPrefix(clean, prefix) {
 		clean = strings.TrimPrefix(clean, prefix)
 	}
 	if clean == ".." || strings.HasPrefix(clean, "../") || clean == "." || strings.Contains(clean, "/../") {
-		return "", fmt.Errorf("lab try: file must stay inside contribute/")
+		return "", fmt.Errorf("lab: file must stay inside contribute/")
 	}
 	if strings.TrimSpace(clean) == "" {
-		return "", fmt.Errorf("lab try: pass a filename inside contribute/")
+		return "", fmt.Errorf("lab: pass a filename inside contribute/")
 	}
 	return filepath.Join(contributeDir, filepath.FromSlash(clean)), nil
+}
+
+func (a *app) prepareTry(source string) (func(), error) {
+	packDir, err := os.MkdirTemp("", "kubecrypt-try-")
+	if err != nil {
+		return nil, fmt.Errorf("lab try: %w", err)
+	}
+	cleanup := func() { _ = os.RemoveAll(packDir) }
+	install, err := curriculum.MaterializeDraft(source, packDir)
+	if err != nil {
+		cleanup()
+		return nil, err
+	}
+	a.livePackDir = packDir
+	a.targetLabID = install.ID
+	a.preview = true
+	return cleanup, nil
 }
 
 func (a *app) useLiveCurriculum() error {
 	info, err := os.Stat(liveCurriculumDir)
 	if err != nil {
-		return fmt.Errorf("lab try: %s not found; run this from the repository root", liveCurriculumDir)
+		return fmt.Errorf("lab publish: %s not found; run this from the repository root", liveCurriculumDir)
 	}
 	if !info.IsDir() {
-		return fmt.Errorf("lab try: %s is not a directory", liveCurriculumDir)
+		return fmt.Errorf("lab publish: %s is not a directory", liveCurriculumDir)
 	}
 	a.livePackDir = liveCurriculumDir
 	return nil
@@ -272,6 +316,14 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 	store, err := game.NewStore()
 	if err != nil {
 		return err
+	}
+	if a.preview {
+		progress, err := store.LoadProgress()
+		if err != nil {
+			return err
+		}
+		previous := progress.CurrentScenarioID
+		defer func() { _ = store.SelectScenario(previous) }()
 	}
 	if _, err := a.ensureProfile(cmd, store, track); err != nil {
 		return err
@@ -292,7 +344,7 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 			return err
 		}
 	}
-	scenario, err := currentScenario(store, registry)
+	scenario, err := resolveCurrentScenario(store, registry, !a.preview)
 	if err != nil {
 		return err
 	}
@@ -611,12 +663,18 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 }
 
 func currentScenario(store *game.Store, registry *curriculum.Registry) (*curriculum.Scenario, error) {
+	return resolveCurrentScenario(store, registry, true)
+}
+
+func resolveCurrentScenario(store *game.Store, registry *curriculum.Registry, retain bool) (*curriculum.Scenario, error) {
 	profile, err := store.LoadProfile()
 	if err != nil {
 		return nil, err
 	}
-	if err := store.RetainScenarios(registry.ScenarioIDs()); err != nil {
-		return nil, fmt.Errorf("sanitize scenario progress: %w", err)
+	if retain {
+		if err := store.RetainScenarios(registry.ScenarioIDs()); err != nil {
+			return nil, fmt.Errorf("sanitize scenario progress: %w", err)
+		}
 	}
 	progress, err := store.LoadProgress()
 	if err != nil {

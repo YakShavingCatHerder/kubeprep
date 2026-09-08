@@ -10,8 +10,9 @@ The bundled starter pack contains:
 1. **Create a Pod** — submit a Pod to the API server and confirm the stored
    object in the isolated training cluster.
 
-Additional scenario packs can be loaded from local directories without
-recompiling KubeCrypt.
+Draft labs in [`contribute/`](contribute/) with `kubecrypt lab try`. Publish
+them into `curriculum/` with `kubecrypt lab publish`. `kubecrypt start` uses
+the pack embedded at compile time.
 
 ## Requirements
 
@@ -73,14 +74,17 @@ Useful commands:
 kubecrypt
 kubecrypt start
 kubecrypt lab try <file>
+kubecrypt lab publish <file>
 kubecrypt status
 kubecrypt reset
 kubecrypt destroy
 kubecrypt destroy --all
 ```
 
-`kubecrypt` with no arguments prints help. `lab try test-lab.yaml` installs a
-lab from `contribute/` into `./curriculum` and starts it without rebuilding. `reset` restores the current lab
+`kubecrypt` with no arguments prints help. `lab try test-lab.yaml` validates a
+lab from `contribute/` and starts it without writing `./curriculum`.
+`lab publish test-lab.yaml` installs that file into `./curriculum` and starts
+it. Neither rebuilds the binary. `reset` restores the current lab
 only. `destroy` removes the cluster and keeps progress; `destroy --all` also
 clears learner data. Destructive commands require confirmation; scripts must
 pass `--force`.

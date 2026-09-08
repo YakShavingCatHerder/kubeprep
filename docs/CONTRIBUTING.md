@@ -24,9 +24,10 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   deterministic reset data. Labs that need the cluster to settle may set
   `observeDelay` (for example `60s`) to pause the first automatic check.
 - Run `kubecrypt lab try test-lab.yaml` from the repository root (filename
-  inside `contribute/`). That installs the file into `./curriculum` and
-  starts that lab without rebuilding. The binary embeds `curriculum/` at
-  compile time for `kubecrypt start`.
+  inside `contribute/`). That validates the file and starts that lab without
+  writing `./curriculum`. When the draft is ready, `kubecrypt lab publish
+  test-lab.yaml` copies it into `./curriculum` and lists it in `catalog.yaml`.
+  The binary embeds `curriculum/` at compile time for `kubecrypt start`.
 - Do not include host shell commands, privileged workloads, host namespaces,
   or `hostPath` volumes.
 - Add a scenario test proving the initial state, target state, and
