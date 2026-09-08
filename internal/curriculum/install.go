@@ -10,11 +10,55 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// LabInstall is the pack location of a lab after InstallLab.
+// LabInstall is the pack location of a lab after InstallLab or MaterializeDraft.
 type LabInstall struct {
 	ID      string
 	Section string
 	Path    string
+}
+
+func inspectLab(sourceFile string) (*Document, LabInstall, error) {
+	document, err := LoadDocument(sourceFile)
+	if err != nil {
+		return nil, LabInstall{}, err
+	}
+	section, err := sectionForDocument(document)
+	if err != nil {
+		return nil, LabInstall{}, err
+	}
+	if err := verifySidecarManifests(filepath.Dir(sourceFile), document); err != nil {
+		return nil, LabInstall{}, err
+	}
+	return document, LabInstall{ID: document.ID, Section: section, Path: LabFilePath(section, document.ID)}, nil
+}
+
+// MaterializeDraft writes a one-lab overlay pack into packDir. It does not
+// read or write an existing catalog. Destination is {section}/{id}.yaml.
+func MaterializeDraft(sourceFile, packDir string) (LabInstall, error) {
+	document, install, err := inspectLab(sourceFile)
+	if err != nil {
+		return LabInstall{}, err
+	}
+	catalog := &Catalog{
+		APIVersion: CatalogAPIVersionV1Alpha1,
+		Name:       "draft",
+		Title:      "Draft",
+		Revision:   document.Revision,
+	}
+	if err := catalog.AddLab(install.Section, install.ID, document.Tracks); err != nil {
+		return LabInstall{}, err
+	}
+	dest := filepath.Join(packDir, filepath.FromSlash(install.Path))
+	if err := copyLabTree(sourceFile, dest, document); err != nil {
+		return LabInstall{}, err
+	}
+	if err := writeCatalogFile(filepath.Join(packDir, "catalog.yaml"), catalog); err != nil {
+		return LabInstall{}, fmt.Errorf("write catalog: %w", err)
+	}
+	if _, err := ValidatePack(packDir); err != nil {
+		return LabInstall{}, err
+	}
+	return install, nil
 }
 
 // InstallLab copies a lab YAML (and its sidecar manifests) into packDir and
@@ -22,16 +66,8 @@ type LabInstall struct {
 // {section}/{id}.yaml. The source file is overwritten in place when it is
 // already that path. Catalog list order is preserved; a new id is appended.
 func InstallLab(sourceFile, packDir string) (LabInstall, error) {
-	document, err := LoadDocument(sourceFile)
+	document, install, err := inspectLab(sourceFile)
 	if err != nil {
-		return LabInstall{}, err
-	}
-	section, err := sectionForDocument(document)
-	if err != nil {
-		return LabInstall{}, err
-	}
-	install := LabInstall{ID: document.ID, Section: section, Path: LabFilePath(section, document.ID)}
-	if err := verifySidecarManifests(filepath.Dir(sourceFile), document); err != nil {
 		return LabInstall{}, err
 	}
 
@@ -40,7 +76,7 @@ func InstallLab(sourceFile, packDir string) (LabInstall, error) {
 	if err != nil {
 		return LabInstall{}, err
 	}
-	if err := catalog.AddLab(section, document.ID, document.Tracks); err != nil {
+	if err := catalog.AddLab(install.Section, install.ID, document.Tracks); err != nil {
 		return LabInstall{}, err
 	}
 
