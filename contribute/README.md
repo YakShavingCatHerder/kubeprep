@@ -31,33 +31,34 @@ Play order lives in `catalog.yaml`, not in the lab file.
 Start from a broken or incomplete cluster. Reset must restore that same
 start, not a healthy cluster.
 
-## Run it from a local pack
+## Try it
 
-A pack is a directory with `catalog.yaml`, lab files, and any extra
-manifests. Nothing is compiled.
+From the repository root:
 
 ```sh
-make validate-pack PACK=./my-pack
-kubecrypt --pack ./my-pack start
+kubecrypt lab try test-lab.yaml
 ```
 
-Do not point a catalog at this `contribute/` directory. Lab ids must be
-unique across the core pack and every `--pack` you load.
+Pass the filename inside `contribute/`. Do not prefix `contribute/`.
+
+That validates the file, copies it to `curriculum/{section}/{id}.yaml`, lists
+the id in `catalog.yaml` under the lab's tracks, validates the pack, and
+starts that lab from disk. You do not rebuild. `kubecrypt start` uses the
+copy embedded at compile time.
+
+Do not point a catalog at this `contribute/` directory. Lab ids must be unique
+across the pack.
 
 ## Publish into core
 
-Canonical labs live at `curriculum/{section}/{id}.yaml`. The binary embeds
-that tree. There is no second copy to sync.
+`kubecrypt lab try test-lab.yaml` writes `curriculum/{section}/{id}.yaml`
+and lists the id in `catalog.yaml`. The binary embeds that tree. There is no
+second copy to sync.
 
-1. Write the lab under `curriculum/{section}/`.
-2. Add the id under the right path and section in `curriculum/catalog.yaml`.
-   The same id can appear on more than one path; it is still one file.
-3. Run `make validate-pack`.
-4. Add a test that setup succeeds, the start is incomplete or broken, the
-   target state is accepted, and reset restores the start. Prove one
-   alternate valid fix when you can.
+Add a test that setup succeeds, the start is incomplete or broken, the target
+state is accepted, and reset restores the start. Prove one alternate valid
+fix when you can.
 
-`kubecrypt --pack ./curriculum start` runs the pack without rebuilding.
 `make install` is only needed when you want the lab inside a plain
 `kubecrypt start`.
 

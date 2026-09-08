@@ -23,23 +23,16 @@ import (
 var Version = "dev"
 
 type app struct {
-	in       io.Reader
-	out      io.Writer
-	err      io.Writer
-	packDirs []string
+	in          io.Reader
+	out         io.Writer
+	err         io.Writer
+	livePackDir string
+	targetLabID string
 }
 
 func Execute() error {
-	a := &app{in: os.Stdin, out: os.Stdout, err: os.Stderr, packDirs: packDirectoriesFromEnvironment()}
+	a := &app{in: os.Stdin, out: os.Stdout, err: os.Stderr}
 	return a.rootCommand().ExecuteContext(context.Background())
-}
-
-func packDirectoriesFromEnvironment() []string {
-	value := strings.TrimSpace(os.Getenv("KUBECRYPT_PACKS"))
-	if value == "" {
-		return nil
-	}
-	return filepath.SplitList(value)
 }
 
 func (a *app) rootCommand() *cobra.Command {
@@ -61,12 +54,12 @@ func (a *app) rootCommand() *cobra.Command {
 	root.AddCommand(
 		a.doctorCommand(),
 		a.startCommand(),
+		a.labCommand(),
 		a.statusCommand(),
 		a.resetCommand(),
 		a.destroyCommand(),
 		a.packCommand(),
 	)
-	root.PersistentFlags().StringSliceVar(&a.packDirs, "pack", append([]string(nil), a.packDirs...), "load an additional local scenario pack directory")
 	root.CompletionOptions.HiddenDefaultCmd = true
 	root.SetHelpCommand(&cobra.Command{
 		Use:    "help [command]",
@@ -121,7 +114,17 @@ Use "{{.CommandPath}} [command] --help" for more information about a command.{{e
 `
 
 func (a *app) registry() (*curriculum.Registry, error) {
-	return curriculum.NewRegistry(a.packDirs...)
+	if a.livePackDir != "" {
+		return curriculum.NewRegistryFromDirectory(a.livePackDir)
+	}
+	return curriculum.NewRegistry()
+}
+
+func (a *app) packDirectories() []string {
+	if a.livePackDir == "" {
+		return nil
+	}
+	return []string{a.livePackDir}
 }
 
 func (a *app) clusterManager() (*cluster.Manager, error) {
@@ -175,41 +178,132 @@ func (a *app) startCommand() *cobra.Command {
 		Use:   "start",
 		Short: "Create the training cluster if needed and continue the current lab",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			store, err := game.NewStore()
-			if err != nil {
-				return err
-			}
-			if _, err := a.ensureProfile(cmd, store, track); err != nil {
-				return err
-			}
-			manager, err := a.clusterManager()
-			if err != nil {
-				return err
-			}
-			if _, err := manager.CheckIn(cmd.Context()); err != nil {
-				return err
-			}
-			registry, err := a.registry()
-			if err != nil {
-				return err
-			}
-			scenario, err := currentScenario(store, registry)
-			if err != nil {
-				return err
-			}
-			if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
-				return err
-			}
-			if prepareOnly {
-				fmt.Fprintf(cmd.OutOrStdout(), "KubeCrypt cluster verified and %s prepared.\n", scenario.Title)
-				return nil
-			}
-			return a.runTrainingSession(cmd.Context(), scenario, manager, store)
+			return a.runStart(cmd, track, prepareOnly)
 		},
 	}
 	command.Flags().StringVar(&track, "track", "", "learning track: beginner, cka, or ckad")
 	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
 	return command
+}
+
+func (a *app) labCommand() *cobra.Command {
+	lab := &cobra.Command{
+		Use:   "lab",
+		Short: "Try labs from the local curriculum pack",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return cmd.Help()
+		},
+	}
+	lab.AddCommand(a.labTryCommand())
+	return lab
+}
+
+func (a *app) labTryCommand() *cobra.Command {
+	var track string
+	var prepareOnly bool
+	command := &cobra.Command{
+		Use:   "try <file>",
+		Short: "Install a contribute/ lab YAML into ./curriculum and start it",
+		Args:  cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			source, err := resolveContributeLab(args[0])
+			if err != nil {
+				return err
+			}
+			if err := a.useLiveCurriculum(); err != nil {
+				return err
+			}
+			install, err := curriculum.InstallLab(source, a.livePackDir)
+			if err != nil {
+				return err
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "installed %s -> %s\n", source, install.Path)
+			a.targetLabID = install.ID
+			return a.runStart(cmd, track, prepareOnly)
+		},
+	}
+	command.Flags().StringVar(&track, "track", "", "learning track: beginner, cka, or ckad")
+	command.Flags().BoolVar(&prepareOnly, "prepare-only", false, "prepare the current lab without starting the TUI")
+	return command
+}
+
+const liveCurriculumDir = "curriculum"
+const contributeDir = "contribute"
+
+func resolveContributeLab(name string) (string, error) {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "", fmt.Errorf("lab try: file is required")
+	}
+	if filepath.IsAbs(name) {
+		return "", fmt.Errorf("lab try: pass a filename inside contribute/, not an absolute path")
+	}
+	clean := filepath.ToSlash(filepath.Clean(name))
+	clean = strings.TrimPrefix(clean, "./")
+	if clean == contributeDir {
+		return "", fmt.Errorf("lab try: pass a filename inside contribute/")
+	}
+	if prefix := contributeDir + "/"; strings.HasPrefix(clean, prefix) {
+		clean = strings.TrimPrefix(clean, prefix)
+	}
+	if clean == ".." || strings.HasPrefix(clean, "../") || clean == "." || strings.Contains(clean, "/../") {
+		return "", fmt.Errorf("lab try: file must stay inside contribute/")
+	}
+	if strings.TrimSpace(clean) == "" {
+		return "", fmt.Errorf("lab try: pass a filename inside contribute/")
+	}
+	return filepath.Join(contributeDir, filepath.FromSlash(clean)), nil
+}
+
+func (a *app) useLiveCurriculum() error {
+	info, err := os.Stat(liveCurriculumDir)
+	if err != nil {
+		return fmt.Errorf("lab try: %s not found; run this from the repository root", liveCurriculumDir)
+	}
+	if !info.IsDir() {
+		return fmt.Errorf("lab try: %s is not a directory", liveCurriculumDir)
+	}
+	a.livePackDir = liveCurriculumDir
+	return nil
+}
+
+func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error {
+	store, err := game.NewStore()
+	if err != nil {
+		return err
+	}
+	if _, err := a.ensureProfile(cmd, store, track); err != nil {
+		return err
+	}
+	manager, err := a.clusterManager()
+	if err != nil {
+		return err
+	}
+	if _, err := manager.CheckIn(cmd.Context()); err != nil {
+		return err
+	}
+	registry, err := a.registry()
+	if err != nil {
+		return err
+	}
+	if a.targetLabID != "" {
+		if err := store.SelectScenario(a.targetLabID); err != nil {
+			return err
+		}
+	}
+	scenario, err := currentScenario(store, registry)
+	if err != nil {
+		return err
+	}
+	if err := a.enterScenario(cmd.Context(), scenario, registry, manager, store, wipeIfNewLab(store, scenario.ID)); err != nil {
+		return err
+	}
+	if prepareOnly {
+		fmt.Fprintf(cmd.OutOrStdout(), "KubeCrypt cluster verified and %s prepared.\n", scenario.Title)
+		return nil
+	}
+	return a.runTrainingSession(cmd.Context(), scenario, manager, store)
 }
 
 func (a *app) statusCommand() *cobra.Command {
@@ -499,7 +593,7 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Debrief:             strings.TrimSpace(scenario.Debrief.Explanation),
 		Kubeconfig:          manager.Paths().Kubeconfig,
 		ToolBinDir:          manager.Paths().BinDir(),
-		PackDirectories:     append([]string(nil), a.packDirs...),
+		PackDirectories:     a.packDirectories(),
 		ObserveWhileRunning: observeDelay > 0,
 		ObserveDelay:        observeDelay,
 		HasNext:             next != nil,

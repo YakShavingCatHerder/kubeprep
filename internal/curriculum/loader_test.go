@@ -208,6 +208,33 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 	}
 }
 
+func TestNewRegistryFromDirectoryOmitsEmbeddedCore(t *testing.T) {
+	packDir := t.TempDir()
+	scenarioData, err := yaml.Marshal(validScenario())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, file := range packFS(scenarioData) {
+		dest := filepath.Join(packDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dest, file.Data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	registry, err := NewRegistryFromDirectory(packDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(registry.ScenarioIDs(), ","); got != "test-scenario" {
+		t.Fatalf("scenario order = %s", got)
+	}
+	if _, err := registry.LoadScenario("pod-creation"); err == nil {
+		t.Fatal("embedded pod-creation should not load from an on-disk pack")
+	}
+}
+
 func TestRegistryRejectsModuleSectionMismatch(t *testing.T) {
 	scenario := validScenario()
 	scenario.Module = "pods"

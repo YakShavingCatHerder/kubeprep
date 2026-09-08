@@ -73,6 +73,23 @@ func NewRegistry(localPackDirectories ...string) (*Registry, error) {
 	return NewRegistryFromSources(sources...)
 }
 
+// NewRegistryFromDirectory loads one on-disk pack without the embedded core pack.
+func NewRegistryFromDirectory(directory string) (*Registry, error) {
+	clean := filepath.Clean(directory)
+	info, err := os.Stat(clean)
+	if err != nil {
+		return nil, fmt.Errorf("open scenario pack %q: %w", directory, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("open scenario pack %q: not a directory", directory)
+	}
+	absolute, err := containedRoot(clean)
+	if err != nil {
+		return nil, fmt.Errorf("open scenario pack %q: %w", directory, err)
+	}
+	return NewRegistryFromSources(Source{Name: absolute, FS: containedDirFS{root: absolute}})
+}
+
 // NewRegistryFromSources is the injectable registry constructor used by tests
 // and alternate front ends.
 func NewRegistryFromSources(sources ...Source) (*Registry, error) {
@@ -126,19 +143,7 @@ func NewRegistryFromSources(sources ...Source) (*Registry, error) {
 
 // ValidatePack validates a standalone local pack without loading the core pack.
 func ValidatePack(directory string) (*Catalog, error) {
-	clean := filepath.Clean(directory)
-	info, err := os.Stat(clean)
-	if err != nil {
-		return nil, fmt.Errorf("validate scenario pack %q: %w", directory, err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("validate scenario pack %q: not a directory", directory)
-	}
-	absolute, err := containedRoot(clean)
-	if err != nil {
-		return nil, fmt.Errorf("validate scenario pack %q: %w", directory, err)
-	}
-	registry, err := NewRegistryFromSources(Source{Name: absolute, FS: containedDirFS{root: absolute}})
+	registry, err := NewRegistryFromDirectory(directory)
 	if err != nil {
 		return nil, err
 	}

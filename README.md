@@ -72,14 +72,15 @@ Useful commands:
 ```sh
 kubecrypt
 kubecrypt start
+kubecrypt lab try <file>
 kubecrypt status
 kubecrypt reset
 kubecrypt destroy
 kubecrypt destroy --all
-kubecrypt --pack ./my-pack start
 ```
 
-`kubecrypt` with no arguments prints help. `reset` restores the current lab
+`kubecrypt` with no arguments prints help. `lab try test-lab.yaml` installs a
+lab from `contribute/` into `./curriculum` and starts it without rebuilding. `reset` restores the current lab
 only. `destroy` removes the cluster and keeps progress; `destroy --all` also
 clears learner data. Destructive commands require confirmation; scripts must
 pass `--force`.

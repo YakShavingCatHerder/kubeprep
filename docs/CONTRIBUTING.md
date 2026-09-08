@@ -23,13 +23,15 @@ with a real Lab Shell; do not assume the TUI suspends into a shell.
   completion text, a technical debrief, capability requirements, and
   deterministic reset data. Labs that need the cluster to settle may set
   `observeDelay` (for example `60s`) to pause the first automatic check.
-- Add the lab id under the right path and section in `curriculum/catalog.yaml`.
-- Run `make validate-pack`. The binary embeds `curriculum/` at compile time.
+- Run `kubecrypt lab try test-lab.yaml` from the repository root (filename
+  inside `contribute/`). That installs the file into `./curriculum` and
+  starts that lab without rebuilding. The binary embeds `curriculum/` at
+  compile time for `kubecrypt start`.
 - Do not include host shell commands, privileged workloads, host namespaces,
   or `hostPath` volumes.
 - Add a scenario test proving the initial state, target state, and
   reset behavior.
 
-Local packs can be loaded with `kubecrypt --pack <directory> start`. Scenario
-IDs must be unique across all active packs. All contributions are reviewed
+Local packs can be validated with `make validate-pack PACK=<directory>`.
+Scenario IDs must be unique in a pack. All contributions are reviewed
 before they become core curriculum.
