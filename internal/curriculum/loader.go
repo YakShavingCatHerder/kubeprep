@@ -1,7 +1,6 @@
 package curriculum
 
 import (
-	"embed"
 	"fmt"
 	"io"
 	"io/fs"
@@ -10,11 +9,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	corepack "github.com/YakShavingCatHerder/kubecrypt/curriculum"
 	"gopkg.in/yaml.v3"
 )
-
-//go:embed bundled
-var bundledFiles embed.FS
 
 type Source struct {
 	Name string
@@ -57,11 +54,7 @@ type Registry struct {
 // NewRegistry loads the embedded core pack followed by explicitly selected
 // local packs. Scenario IDs must be unique across every source.
 func NewRegistry(localPackDirectories ...string) (*Registry, error) {
-	bundled, err := fs.Sub(bundledFiles, "bundled")
-	if err != nil {
-		return nil, fmt.Errorf("open bundled scenario pack: %w", err)
-	}
-	sources := []Source{{Name: "bundled", FS: bundled}}
+	sources := []Source{{Name: "core", FS: corepack.Files}}
 	for _, directory := range localPackDirectories {
 		clean := filepath.Clean(directory)
 		info, statErr := os.Stat(clean)
@@ -78,6 +71,23 @@ func NewRegistry(localPackDirectories ...string) (*Registry, error) {
 		sources = append(sources, Source{Name: absolute, FS: containedDirFS{root: absolute}})
 	}
 	return NewRegistryFromSources(sources...)
+}
+
+// NewRegistryFromDirectory loads one on-disk pack without the embedded core pack.
+func NewRegistryFromDirectory(directory string) (*Registry, error) {
+	clean := filepath.Clean(directory)
+	info, err := os.Stat(clean)
+	if err != nil {
+		return nil, fmt.Errorf("open scenario pack %q: %w", directory, err)
+	}
+	if !info.IsDir() {
+		return nil, fmt.Errorf("open scenario pack %q: not a directory", directory)
+	}
+	absolute, err := containedRoot(clean)
+	if err != nil {
+		return nil, fmt.Errorf("open scenario pack %q: %w", directory, err)
+	}
+	return NewRegistryFromSources(Source{Name: absolute, FS: containedDirFS{root: absolute}})
 }
 
 // NewRegistryFromSources is the injectable registry constructor used by tests
@@ -131,21 +141,9 @@ func NewRegistryFromSources(sources ...Source) (*Registry, error) {
 	return registry, nil
 }
 
-// ValidatePack validates a standalone local pack without loading bundled data.
+// ValidatePack validates a standalone local pack without loading the core pack.
 func ValidatePack(directory string) (*Catalog, error) {
-	clean := filepath.Clean(directory)
-	info, err := os.Stat(clean)
-	if err != nil {
-		return nil, fmt.Errorf("validate scenario pack %q: %w", directory, err)
-	}
-	if !info.IsDir() {
-		return nil, fmt.Errorf("validate scenario pack %q: not a directory", directory)
-	}
-	absolute, err := containedRoot(clean)
-	if err != nil {
-		return nil, fmt.Errorf("validate scenario pack %q: %w", directory, err)
-	}
-	registry, err := NewRegistryFromSources(Source{Name: absolute, FS: containedDirFS{root: absolute}})
+	registry, err := NewRegistryFromDirectory(directory)
 	if err != nil {
 		return nil, err
 	}

@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -27,10 +29,13 @@ func TestBareCommandShowsHelp(t *testing.T) {
 	if strings.Contains(got, "kubecrypt [flags]\n") || strings.Contains(got, "  kubecrypt [command]\n") {
 		t.Errorf("help still splits usage onto two lines:\n%s", got)
 	}
-	for _, want := range []string{"start", "status", "reset", "destroy", "doctor"} {
+	for _, want := range []string{"start", "lab", "status", "reset", "destroy", "doctor"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("help missing %q:\n%s", want, got)
 		}
+	}
+	if strings.Contains(got, "--pack") {
+		t.Errorf("help still lists --pack:\n%s", got)
 	}
 	for _, hidden := range []string{"\n  pack ", "\n  check ", "\n  setup ", "\n  resume ", "\n  completion ", "\n  help "} {
 		if strings.Contains(got, hidden) {
@@ -49,7 +54,7 @@ func TestRootUsesNeutralCommands(t *testing.T) {
 		}
 		names[command.Name()] = true
 	}
-	for _, expected := range []string{"start", "status", "reset", "destroy", "doctor"} {
+	for _, expected := range []string{"start", "lab", "status", "reset", "destroy", "doctor"} {
 		if !names[expected] {
 			t.Errorf("missing command %q", expected)
 		}
@@ -244,5 +249,66 @@ func TestEnsureProfileAcceptsCertificationTrack(t *testing.T) {
 	}
 	if profile.Experience != game.ExperienceCKADCandidate || !profile.OnboardingComplete {
 		t.Fatalf("unexpected profile: %#v", profile)
+	}
+}
+
+func TestLabTryRequiresLabFile(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "try"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil {
+		t.Fatal("lab try without a file should fail")
+	}
+}
+
+func TestLabTryRejectsMissingFile(t *testing.T) {
+	t.Chdir(t.TempDir())
+	if err := os.Mkdir("curriculum", 0o700); err != nil {
+		t.Fatal(err)
+	}
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"lab", "try", "missing.yaml", "--track=beginner", "--prepare-only"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil {
+		t.Fatal("lab try missing.yaml should fail")
+	}
+}
+
+func TestResolveContributeLab(t *testing.T) {
+	got, err := resolveContributeLab("test-lab.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != filepath.Join("contribute", "test-lab.yaml") {
+		t.Fatalf("got %q", got)
+	}
+	got, err = resolveContributeLab("contribute/test-lab.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got != filepath.Join("contribute", "test-lab.yaml") {
+		t.Fatalf("prefixed got %q", got)
+	}
+	if _, err := resolveContributeLab("../secret.yaml"); err == nil {
+		t.Fatal("expected escape to fail")
+	}
+	if _, err := resolveContributeLab("/tmp/lab.yaml"); err == nil {
+		t.Fatal("expected absolute path to fail")
+	}
+}
+
+func TestLabTryIsVisible(t *testing.T) {
+	a := &app{in: strings.NewReader(""), out: &bytes.Buffer{}, err: &bytes.Buffer{}}
+	root := a.rootCommand()
+	lab, _, err := root.Find([]string{"lab", "try"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if lab.Hidden || lab.Name() != "try" {
+		t.Fatalf("lab try hidden=%v name=%q", lab.Hidden, lab.Name())
 	}
 }

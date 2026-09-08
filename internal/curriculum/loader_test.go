@@ -12,7 +12,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestBundledRegistryLoadsCoreScenarios(t *testing.T) {
+func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
 	registry, err := NewRegistry()
 	if err != nil {
 		t.Fatal(err)
@@ -134,26 +134,6 @@ func TestParseObserveDelay(t *testing.T) {
 	}
 }
 
-func TestBundledAssetsMatchCanonicalCurriculum(t *testing.T) {
-	files := []string{
-		"catalog.yaml",
-		"pods/pod-creation.yaml",
-	}
-	for _, name := range files {
-		canonical, err := os.ReadFile(filepath.Join("..", "..", "curriculum", filepath.FromSlash(name)))
-		if err != nil {
-			t.Fatal(err)
-		}
-		bundled, err := bundledFiles.ReadFile("bundled/" + name)
-		if err != nil {
-			t.Fatal(err)
-		}
-		if !bytes.Equal(canonical, bundled) {
-			t.Errorf("bundled %s differs from canonical pack", name)
-		}
-	}
-}
-
 func TestLoadFSRejectsUnknownFields(t *testing.T) {
 	data, err := yaml.Marshal(validScenario())
 	if err != nil {
@@ -225,6 +205,33 @@ func TestNewRegistryAppendsLocalPackToBundledScenarios(t *testing.T) {
 	ids := registry.ScenarioIDs()
 	if got := strings.Join(ids, ","); got != "pod-creation,test-scenario" {
 		t.Fatalf("scenario order = %s", got)
+	}
+}
+
+func TestNewRegistryFromDirectoryOmitsEmbeddedCore(t *testing.T) {
+	packDir := t.TempDir()
+	scenarioData, err := yaml.Marshal(validScenario())
+	if err != nil {
+		t.Fatal(err)
+	}
+	for name, file := range packFS(scenarioData) {
+		dest := filepath.Join(packDir, filepath.FromSlash(name))
+		if err := os.MkdirAll(filepath.Dir(dest), 0o700); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(dest, file.Data, 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	registry, err := NewRegistryFromDirectory(packDir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(registry.ScenarioIDs(), ","); got != "test-scenario" {
+		t.Fatalf("scenario order = %s", got)
+	}
+	if _, err := registry.LoadScenario("pod-creation"); err == nil {
+		t.Fatal("embedded pod-creation should not load from an on-disk pack")
 	}
 }
 
