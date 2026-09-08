@@ -66,7 +66,7 @@ func TestDoctorReportsPendingToolInstall(t *testing.T) {
 	}}
 	results := (&Doctor{Runner: runner, Paths: paths, GOOS: "linux"}).Check(context.Background())
 	kind := results[2]
-	if kind.OK || !strings.Contains(kind.Detail, KindVersion) || !strings.Contains(kind.Remediation, "kubecrypt doctor") {
+	if kind.OK || !strings.Contains(kind.Detail, KindVersion) || !strings.Contains(kind.Remediation, "kubeprep doctor") {
 		t.Fatalf("kind check = %#v", kind)
 	}
 }

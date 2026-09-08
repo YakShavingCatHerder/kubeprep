@@ -1,5 +1,5 @@
 # Compiled binaries and release output
-/kubecrypt
+/kubeprep
 /bin/
 /build/
 /dist/
@@ -19,8 +19,8 @@ go.work.sum
 *.prof
 *.pprof
 
-# Local KubeCrypt runtime state
-/.kubecrypt/
+# Local KubePrep runtime state
+/.kubeprep/
 /tmp/
 /.cache/
 *.kubeconfig

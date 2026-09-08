@@ -1,7 +1,7 @@
 package curriculum
 
 const (
-	APIVersionV1Alpha1 = "kubecrypt.io/v1alpha1"
+	APIVersionV1Alpha1 = "kubeprep.io/v1alpha1"
 )
 
 // Scenario is a versioned, declarative Kubernetes training scenario.

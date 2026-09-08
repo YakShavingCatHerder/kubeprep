@@ -16,11 +16,11 @@ import (
 )
 
 const (
-	ownershipMarkerName      = "kubecrypt-ownership"
+	ownershipMarkerName      = "kubeprep-ownership"
 	ownershipMarkerNamespace = "kube-system"
 )
 
-var ErrOwnershipMismatch = errors.New("kubecrypt cluster ownership verification failed")
+var ErrOwnershipMismatch = errors.New("kubeprep cluster ownership verification failed")
 
 // Identity binds local state to one specific kind cluster.
 type Identity struct {
@@ -30,7 +30,7 @@ type Identity struct {
 }
 
 // Manager owns lifecycle and guarded mutation operations for the dedicated
-// KubeCrypt kind cluster.
+// KubePrep kind cluster.
 type Manager struct {
 	runner Runner
 	paths  Paths
@@ -138,7 +138,7 @@ func (m *Manager) VerifyOwnership(ctx context.Context) (Identity, error) {
 const workspaceWipeTimeout = "60s"
 
 // WipeWorkspace deletes a lab namespace and waits until it is gone. Extra
-// objects the learner created in that namespace go with it. Only kubecrypt-*
+// objects the learner created in that namespace go with it. Only kubeprep-*
 // names are accepted. A missing namespace is ignored.
 func (m *Manager) WipeWorkspace(ctx context.Context, namespace string) error {
 	if err := validateLabWorkspace(namespace); err != nil {
@@ -159,14 +159,14 @@ func validateLabWorkspace(namespace string) error {
 	if namespace == "" {
 		return fmt.Errorf("wipe workspace: namespace must not be empty")
 	}
-	if !strings.HasPrefix(namespace, "kubecrypt-") {
-		return fmt.Errorf("wipe workspace: refusing namespace %q (must be kubecrypt-*)", namespace)
+	if !strings.HasPrefix(namespace, "kubeprep-") {
+		return fmt.Errorf("wipe workspace: refusing namespace %q (must be kubeprep-*)", namespace)
 	}
 	return nil
 }
 
 // SetContextNamespace points the dedicated kubeconfig at a lab workspace so
-// bare kubectl uses that namespace. kubecrypt-* names and default are allowed.
+// bare kubectl uses that namespace. kubeprep-* names and default are allowed.
 // default is used for labs that have no declared workspace.
 func (m *Manager) SetContextNamespace(ctx context.Context, namespace string) error {
 	namespace = strings.TrimSpace(namespace)
@@ -299,7 +299,7 @@ func (m *Manager) createOwnershipMarker(ctx context.Context, identity Identity) 
 			"name":      ownershipMarkerName,
 			"namespace": ownershipMarkerNamespace,
 			"labels": map[string]string{
-				"app.kubernetes.io/managed-by": "kubecrypt",
+				"app.kubernetes.io/managed-by": "kubeprep",
 			},
 		},
 		"data": map[string]string{
@@ -391,7 +391,7 @@ func (m *Manager) command(name string, args ...string) Command {
 func (m *Manager) writeKindConfig() error {
 	const config = `kind: Cluster
 apiVersion: kind.x-k8s.io/v1alpha4
-name: kubecrypt
+name: kubeprep
 nodes:
   - role: control-plane
   - role: worker

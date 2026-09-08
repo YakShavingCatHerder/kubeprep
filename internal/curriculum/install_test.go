@@ -67,7 +67,7 @@ func TestInstallLabRejectsSectionMismatch(t *testing.T) {
 	scenario := validScenario()
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
-	scenario.Namespace = "kubecrypt-test"
+	scenario.Namespace = "kubeprep-test"
 	body, err := yaml.Marshal(scenario)
 	if err != nil {
 		t.Fatal(err)
@@ -92,7 +92,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: record
-  namespace: kubecrypt-test
+  namespace: kubeprep-test
 `), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -155,7 +155,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: record
-  namespace: kubecrypt-test
+  namespace: kubeprep-test
 `), 0o600); err != nil {
 		t.Fatal(err)
 	}
@@ -172,7 +172,7 @@ func TestMaterializeDraftRejectsSectionMismatch(t *testing.T) {
 	scenario := validScenario()
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
-	scenario.Namespace = "kubecrypt-test"
+	scenario.Namespace = "kubeprep-test"
 	body, err := yaml.Marshal(scenario)
 	if err != nil {
 		t.Fatal(err)
@@ -211,7 +211,7 @@ func writeInstallableLab(t *testing.T, dir, name string, manifests []string) str
 	scenario.Setup.Manifests = manifests
 	scenario.Reset.Manifests = manifests
 	if len(manifests) == 0 {
-		scenario.Namespace = "kubecrypt-test"
+		scenario.Namespace = "kubeprep-test"
 	}
 	body, err := yaml.Marshal(scenario)
 	if err != nil {

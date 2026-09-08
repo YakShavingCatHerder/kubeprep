@@ -40,7 +40,7 @@ func NewShellRunner() *ShellRunner {
 	}
 }
 
-// Command builds the user's preferred shell with KubeCrypt-scoped environment.
+// Command builds the user's preferred shell with KubePrep-scoped environment.
 // Stdin, stdout, and stderr are left unset so a PTY can attach them.
 func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.Cmd, error) {
 	shell := "/bin/sh"
@@ -50,20 +50,20 @@ func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.
 
 	executable, err := r.Executable()
 	if err != nil {
-		return nil, fmt.Errorf("resolve kubecrypt executable: %w", err)
+		return nil, fmt.Errorf("resolve kubeprep executable: %w", err)
 	}
 
-	const prelude = `printf '\nKubeCrypt Lab Shell — %s\nIsolated kubeconfig is active. The scenario stays visible in the other pane.\n[?] hint  [F2] check  [F11] zoom  [F10] quit\n\n' "$KUBECRYPT_SCENARIO"; exec "$KUBECRYPT_SHELL"`
+	const prelude = `printf '\nKubePrep Lab Shell — %s\nIsolated kubeconfig is active. The scenario stays visible in the other pane.\n[?] hint  [F2] check  [F11] zoom  [F10] quit\n\n' "$KUBEPREP_SCENARIO"; exec "$KUBEPREP_SHELL"`
 	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", prelude)
 	env := map[string]string{
-		"TERM":                 "xterm-256color",
-		"KUBECONFIG":           session.Kubeconfig,
-		"KUBECRYPT_SCENARIO":   session.ScenarioID,
-		"KUBECRYPT_NAMESPACE":  session.Namespace,
-		"KUBECRYPT_EXECUTABLE": executable,
-		"KUBECRYPT_LAB_SHELL":  "1",
-		"KUBECRYPT_OBJECTIVE":  session.Objective,
-		"KUBECRYPT_SHELL":      shell,
+		"TERM":                "xterm-256color",
+		"KUBECONFIG":          session.Kubeconfig,
+		"KUBEPREP_SCENARIO":   session.ScenarioID,
+		"KUBEPREP_NAMESPACE":  session.Namespace,
+		"KUBEPREP_EXECUTABLE": executable,
+		"KUBEPREP_LAB_SHELL":  "1",
+		"KUBEPREP_OBJECTIVE":  session.Objective,
+		"KUBEPREP_SHELL":      shell,
 	}
 	if session.ToolBinDir != "" {
 		current := "/usr/bin:/bin"

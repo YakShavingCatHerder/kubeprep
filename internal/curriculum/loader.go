@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	corepack "github.com/YakShavingCatHerder/kubecrypt/curriculum"
+	corepack "github.com/YakShavingCatHerder/kubeprep/curriculum"
 	"gopkg.in/yaml.v3"
 )
 

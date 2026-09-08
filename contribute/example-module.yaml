@@ -30,7 +30,7 @@ authoring:
   # One alternate valid path, to prove the grader is not locked to a single command.
   proveAlternate:
 
-apiVersion: kubecrypt.io/v1alpha1
+apiVersion: kubeprep.io/v1alpha1
 # Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
 id:
 # Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
@@ -56,7 +56,7 @@ tracks:
   - beginner
   - cka
   - ckad
-# Workspace Namespace. Must be kubecrypt-*. Created on start; wiped and recreated on reset.
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
 namespace:
 # Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
 startingClusterConfiguration: ""

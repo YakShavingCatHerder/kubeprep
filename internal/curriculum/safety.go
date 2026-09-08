@@ -41,11 +41,11 @@ func validateManifestSafety(name string, data []byte) error {
 		resourceName, _ := metadata["name"].(string)
 		namespace, _ := metadata["namespace"].(string)
 		if kind == "Namespace" {
-			if !strings.HasPrefix(resourceName, "kubecrypt-") {
-				return fmt.Errorf("manifest %q document %d: namespace name must start with kubecrypt-", name, document)
+			if !strings.HasPrefix(resourceName, "kubeprep-") {
+				return fmt.Errorf("manifest %q document %d: namespace name must start with kubeprep-", name, document)
 			}
-		} else if namespace == "" || !strings.HasPrefix(namespace, "kubecrypt-") {
-			return fmt.Errorf("manifest %q document %d: resource %s/%s must use an explicit kubecrypt-* namespace", name, document, kind, resourceName)
+		} else if namespace == "" || !strings.HasPrefix(namespace, "kubeprep-") {
+			return fmt.Errorf("manifest %q document %d: resource %s/%s must use an explicit kubeprep-* namespace", name, document, kind, resourceName)
 		}
 		if path, found := forbiddenManifestField(object, ""); found {
 			return fmt.Errorf("manifest %q document %d: forbidden field %s", name, document, path)

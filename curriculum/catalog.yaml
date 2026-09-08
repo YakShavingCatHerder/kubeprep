@@ -1,6 +1,6 @@
-apiVersion: kubecrypt.io/catalog/v1alpha1
+apiVersion: kubeprep.io/catalog/v1alpha1
 name: core
-title: KubeCrypt Core Scenarios
+title: KubePrep Core Scenarios
 revision: 2026-09
 paths:
   - id: beginner

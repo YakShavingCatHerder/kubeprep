@@ -207,7 +207,7 @@ func TestScenarioViewKeepsShellVisibleAfterSuccess(t *testing.T) {
 			Title:      "First API Object",
 			HasNext:    true,
 			NextTitle:  "First API Object",
-			Completion: "Pod nginx exists in kubecrypt-beginner.",
+			Completion: "Pod nginx exists in kubeprep-beginner.",
 			Debrief:    "The API server stored the Pod object.",
 		},
 		lab:           &memoryLab{view: "kubectl get nodes"},
@@ -232,7 +232,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			Experience: "beginner",
 			Title:      "Test Scenario",
 			Objective:  "Inspect the cluster.",
-			Namespace:  "kubecrypt-test",
+			Namespace:  "kubeprep-test",
 			Resource:   "cluster nodes",
 		},
 		storyBeats: []string{"The cluster is already running."},
@@ -375,7 +375,7 @@ func TestPtyLabEchoesACommand(t *testing.T) {
 	if err := lab.Start(ctx, ShellSession{ScenarioID: "pty-smoke"}, 80, 24); err != nil {
 		t.Fatalf("start lab: %v", err)
 	}
-	if err := lab.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("echo kubecrypt-split")}); err != nil {
+	if err := lab.HandleKey(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune("echo kubeprep-split")}); err != nil {
 		t.Fatal(err)
 	}
 	if err := lab.HandleKey(tea.KeyMsg{Type: tea.KeyEnter}); err != nil {
@@ -383,7 +383,7 @@ func TestPtyLabEchoesACommand(t *testing.T) {
 	}
 	deadline := time.Now().Add(3 * time.Second)
 	for time.Now().Before(deadline) {
-		if strings.Contains(lab.View(), "kubecrypt-split") {
+		if strings.Contains(lab.View(), "kubeprep-split") {
 			return
 		}
 		time.Sleep(50 * time.Millisecond)

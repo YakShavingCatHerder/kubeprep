@@ -7,7 +7,7 @@ import (
 )
 
 const (
-	ClusterName = "kubecrypt"
+	ClusterName = "kubeprep"
 	ContextName = "kind-" + ClusterName
 	NodeImage   = "kindest/node:v1.35.5@sha256:ce977ae6d65918d0b58a5f8b5e940429c2ce42fa3a5619ec2bbc60b949c0ac95"
 )
@@ -26,7 +26,7 @@ func DefaultPaths() (Paths, error) {
 	if err != nil {
 		return Paths{}, fmt.Errorf("resolve user config directory: %w", err)
 	}
-	return PathsForDirectory(filepath.Join(root, "kubecrypt")), nil
+	return PathsForDirectory(filepath.Join(root, "kubeprep")), nil
 }
 
 // PathsForDirectory constructs paths rooted at directory. It is primarily
@@ -40,7 +40,7 @@ func PathsForDirectory(directory string) Paths {
 	}
 }
 
-// BinDir is where KubeCrypt stores pinned kind and kubectl binaries.
+// BinDir is where KubePrep stores pinned kind and kubectl binaries.
 func (p Paths) BinDir() string {
 	return filepath.Join(p.Directory, "bin")
 }

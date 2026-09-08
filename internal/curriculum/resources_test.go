@@ -7,17 +7,17 @@ import (
 )
 
 func TestComposeResourcesPrependsDeclaredNamespace(t *testing.T) {
-	scenario := &Scenario{Namespace: "kubecrypt-beginner"}
+	scenario := &Scenario{Namespace: "kubeprep-beginner"}
 	got, err := scenario.ComposeResources(ResourceSet{Manifests: []string{"workload.yaml"}}, func(reference string) ([]byte, error) {
 		if reference != "workload.yaml" {
 			t.Fatalf("read %q", reference)
 		}
-		return []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: record\n  namespace: kubecrypt-beginner\n"), nil
+		return []byte("apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: record\n  namespace: kubeprep-beginner\n"), nil
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.HasPrefix(got, NamespaceDocument("kubecrypt-beginner")) {
+	if !bytes.HasPrefix(got, NamespaceDocument("kubeprep-beginner")) {
 		t.Fatalf("namespace document is not first:\n%s", got)
 	}
 	if !bytes.Contains(got, []byte("kind: ConfigMap")) {
@@ -26,20 +26,20 @@ func TestComposeResourcesPrependsDeclaredNamespace(t *testing.T) {
 }
 
 func TestComposeResourcesNamespaceOnly(t *testing.T) {
-	scenario := &Scenario{Namespace: "kubecrypt-beginner"}
+	scenario := &Scenario{Namespace: "kubeprep-beginner"}
 	got, err := scenario.ComposeResources(ResourceSet{}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := strings.TrimSpace(string(got)); got != strings.TrimSpace(string(NamespaceDocument("kubecrypt-beginner"))) {
+	if got := strings.TrimSpace(string(got)); got != strings.TrimSpace(string(NamespaceDocument("kubeprep-beginner"))) {
 		t.Fatalf("got %q", got)
 	}
 }
 
 func TestComposeResourcesIncludesStartingConfiguration(t *testing.T) {
 	scenario := &Scenario{
-		Namespace:                    "kubecrypt-beginner",
-		StartingClusterConfiguration: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: broken\n  namespace: kubecrypt-beginner\n",
+		Namespace:                    "kubeprep-beginner",
+		StartingClusterConfiguration: "apiVersion: v1\nkind: ConfigMap\nmetadata:\n  name: broken\n  namespace: kubeprep-beginner\n",
 	}
 	got, err := scenario.ComposeResources(ResourceSet{}, nil)
 	if err != nil {

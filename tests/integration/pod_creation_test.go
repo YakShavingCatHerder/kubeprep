@@ -10,14 +10,14 @@ import (
 	"testing"
 	"time"
 
-	"github.com/YakShavingCatHerder/kubecrypt/internal/cluster"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/validator"
+	"github.com/YakShavingCatHerder/kubeprep/internal/cluster"
+	"github.com/YakShavingCatHerder/kubeprep/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubeprep/internal/validator"
 )
 
 func TestPodCreationGradesStoredAPIObject(t *testing.T) {
-	if os.Getenv("KUBECRYPT_INTEGRATION") != "1" {
-		t.Skip("set KUBECRYPT_INTEGRATION=1 to create a disposable kind cluster")
+	if os.Getenv("KUBEPREP_INTEGRATION") != "1" {
+		t.Skip("set KUBEPREP_INTEGRATION=1 to create a disposable kind cluster")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 12*time.Minute)
@@ -56,7 +56,7 @@ func TestPodCreationGradesStoredAPIObject(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(setup, []byte("kubecrypt-beginner")) {
+	if !bytes.Contains(setup, []byte("kubeprep-beginner")) {
 		t.Fatalf("setup missing declared namespace: %s", setup)
 	}
 	if err := manager.Apply(ctx, setup); err != nil {
@@ -82,7 +82,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: nginx
-  namespace: kubecrypt-beginner
+  namespace: kubeprep-beginner
 spec:
   containers:
     - name: web
@@ -97,7 +97,7 @@ spec:
 	}
 	waitForStatus(t, ctx, runner, check, validator.Wrong, 2*time.Minute)
 
-	if _, err := runner.Run(ctx, "run", "nginx", "--image=nginx:1.27", "--namespace", "kubecrypt-beginner"); err != nil {
+	if _, err := runner.Run(ctx, "run", "nginx", "--image=nginx:1.27", "--namespace", "kubeprep-beginner"); err != nil {
 		t.Fatalf("kubectl run: %v", err)
 	}
 	waitForStatus(t, ctx, runner, check, validator.Success, 30*time.Second)
@@ -105,9 +105,9 @@ spec:
 
 func podCreationCheck() validator.Check {
 	return validator.All(
-		validator.ObjectExists{Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx"},
+		validator.ObjectExists{Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx"},
 		validator.FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
+			Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		},
 	)

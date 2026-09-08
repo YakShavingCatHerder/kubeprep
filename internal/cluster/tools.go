@@ -78,7 +78,7 @@ func RequireTools(paths Paths) error {
 		{name: "kubectl", path: paths.KubectlBinary()},
 	} {
 		if !fileExists(tool.path) {
-			return fmt.Errorf("%s is not installed; run `kubecrypt doctor`", tool.name)
+			return fmt.Errorf("%s is not installed; run `kubeprep doctor`", tool.name)
 		}
 	}
 	return nil
@@ -197,7 +197,7 @@ func httpGet(ctx context.Context, url string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	req.Header.Set("User-Agent", "kubecrypt")
+	req.Header.Set("User-Agent", "kubeprep")
 	client := &http.Client{Timeout: 3 * time.Minute}
 	resp, err := client.Do(req)
 	if err != nil {
