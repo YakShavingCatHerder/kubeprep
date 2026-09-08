@@ -175,7 +175,7 @@ func TestFollowingIncompleteScenario(t *testing.T) {
 	}
 }
 
-func TestCurrentScenarioSkipsTutorialForCertificationTrack(t *testing.T) {
+func TestCurrentScenarioUsesCertificationTrackPlayOrder(t *testing.T) {
 	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
 	if err != nil {
 		t.Fatal(err)

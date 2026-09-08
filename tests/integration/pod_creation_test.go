@@ -26,7 +26,7 @@ func TestPodCreationGradesStoredAPIObject(t *testing.T) {
 	configDir := t.TempDir()
 	t.Setenv("KUBECONFIG", filepath.Join(t.TempDir(), "unrelated-kubeconfig"))
 	manager := cluster.NewManagerWithPaths(cluster.ExecRunner{}, cluster.PathsForDirectory(configDir))
-	if _, err := manager.CheckIn(ctx); err != nil {
+	if _, err := manager.EnsureCluster(ctx); err != nil {
 		t.Fatalf("check in: %v", err)
 	}
 	t.Cleanup(func() {

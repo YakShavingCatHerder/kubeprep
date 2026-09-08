@@ -176,14 +176,6 @@ func (s *Store) loadProgress() (Progress, error) {
 	return progress, nil
 }
 
-// SaveProgress validates and atomically persists all scenario progress.
-func (s *Store) SaveProgress(progress Progress) error {
-	stateMu.Lock()
-	defer stateMu.Unlock()
-
-	return s.saveProgress(progress)
-}
-
 func (s *Store) saveProgress(progress Progress) error {
 	if progress.Scenarios == nil {
 		progress.Scenarios = make(map[string]ScenarioProgress)
@@ -259,7 +251,7 @@ func (s *Store) SelectScenario(scenarioID string) error {
 }
 
 // RetainScenarios removes progress for scenarios that are not present in the
-// active registry. This keeps removed local packs from blocking resume.
+// active registry. This keeps removed labs from blocking resume.
 func (s *Store) RetainScenarios(validIDs []string) error {
 	stateMu.Lock()
 	defer stateMu.Unlock()

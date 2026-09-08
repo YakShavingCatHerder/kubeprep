@@ -1,46 +1,28 @@
-# KubeCrypt architecture
+# Architecture
 
-KubeCrypt separates scenario intent from where a scenario runs.
+The `kubecrypt` process owns learner progress, the curriculum pack embedded
+from `curriculum/` at compile time, `kind` lifecycle, state checks, and a
+split terminal: scenario pane plus a real PTY Lab Shell.
 
-## Local v0.1
+- `start` reads the embed.
+- `lab try` runs a `contribute/` file from a temp overlay (no pack writes).
+- `lab publish` writes `./curriculum` and starts that copy from disk. Rebuild
+  before `start` sees it.
 
-The `kubecrypt` process owns:
+The Lab Shell gets a dedicated kubeconfig. KubeCrypt mutations verify cluster
+ownership themselves; they do not trust the shell or the user's current
+context.
 
-- learner onboarding and progress,
-- the core curriculum pack embedded from `curriculum/` at compile time,
-- KubeCrypt cluster lifecycle,
-- state validation,
-- the Bubble Tea scenario view with a permanent split: scenario pane plus a
-  real PTY Lab Shell.
+## Packages
 
-Authors run a contribute file with `lab try` (temp overlay, no pack writes)
-or `lab publish` (write `./curriculum`, then start that copy from disk).
-`start` does not load extra directories and does not provide `--pack`.
+| Package | Owns |
+| --- | --- |
+| `internal/curriculum` | schema, pack load, `lab try` / `publish` |
+| `internal/cluster` | doctor, kind, kubeconfig, ownership |
+| `internal/validator` | observed cluster state |
+| `internal/game` | profile and progress files |
+| `internal/terminal` | split view and Lab Shell PTY |
+| `internal/cli` | commands |
 
-The Lab Shell receives a dedicated kubeconfig through its process environment.
-KubeCrypt's own mutating operations independently verify cluster ownership;
-they never trust the shell or the user's global current context.
-
-## Runtime boundaries
-
-- `internal/curriculum` loads packs and describes setup, typed checks, and reset.
-- `internal/cluster` owns environment checks, identity, and lifecycle.
-- `internal/validator` observes Kubernetes state.
-- `internal/game` owns learner profile and progress.
-- `internal/terminal` renders the split scenario view and hosts the Lab Shell PTY.
-
-Neither curriculum nor validators depend on Bubble Tea. Overlay drafts,
-on-disk `curriculum/`, and the embedded pack follow the same schema and
-safety validation.
-
-## Future hosted mode
-
-A hosted version should put the blog in front of—not inside—the execution
-plane. Each learner would receive an expiring isolated VM or virtual cluster,
-with browser terminal traffic passing through an authenticated WebSocket
-gateway. Quotas, restricted egress, admission policy, idle expiry, and
-guaranteed cleanup are required.
-
-This infrastructure is deliberately outside v0.1. An initial hosted experiment
-should use an established workshop platform such as Educates rather than
-exposing a shell from the personal blog server.
+Curriculum and validators do not import Bubble Tea. Overlay drafts, on-disk
+`curriculum/`, and the embed use the same schema and safety checks.

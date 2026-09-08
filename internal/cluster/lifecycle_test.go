@@ -33,7 +33,7 @@ func (f *fakeRunner) Run(_ context.Context, command Command) (Result, error) {
 	return f.run(command)
 }
 
-func TestCheckInCreatesDedicatedClusterAndIdentity(t *testing.T) {
+func TestEnsureClusterCreatesDedicatedClusterAndIdentity(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	ca, fingerprint := testCA(t)
 	server := "https://127.0.0.1:6443"
@@ -75,12 +75,12 @@ func TestCheckInCreatesDedicatedClusterAndIdentity(t *testing.T) {
 		}
 	}
 
-	identity, err := NewManagerWithPaths(runner, paths).CheckIn(context.Background())
+	identity, err := NewManagerWithPaths(runner, paths).EnsureCluster(context.Background())
 	if err != nil {
-		t.Fatalf("CheckIn() error = %v", err)
+		t.Fatalf("EnsureCluster() error = %v", err)
 	}
 	if identity != (Identity{ClusterName: ClusterName, APIServer: server, CAFingerprint: fingerprint}) {
-		t.Fatalf("CheckIn() identity = %#v", identity)
+		t.Fatalf("EnsureCluster() identity = %#v", identity)
 	}
 	for _, command := range runner.got {
 		if !slices.Contains(command.Env, "KUBECONFIG="+paths.Kubeconfig) {
@@ -131,7 +131,7 @@ func TestApplyRejectsUnrelatedCurrentContext(t *testing.T) {
 	}
 }
 
-func TestCheckInExistingClusterRequiresOwnershipRecord(t *testing.T) {
+func TestEnsureClusterExistingClusterRequiresOwnershipRecord(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	runner := &fakeRunner{run: func(command Command) (Result, error) {
 		if command.Name == "kind" {
@@ -139,9 +139,9 @@ func TestCheckInExistingClusterRequiresOwnershipRecord(t *testing.T) {
 		}
 		return Result{}, fmt.Errorf("unexpected command: %s", command.Name)
 	}}
-	_, err := NewManagerWithPaths(runner, paths).CheckIn(context.Background())
+	_, err := NewManagerWithPaths(runner, paths).EnsureCluster(context.Background())
 	if !errors.Is(err, ErrOwnershipMismatch) {
-		t.Fatalf("CheckIn() error = %v, want ErrOwnershipMismatch", err)
+		t.Fatalf("EnsureCluster() error = %v, want ErrOwnershipMismatch", err)
 	}
 	if len(runner.got) != 1 {
 		t.Fatalf("commands = %d, want only kind membership check", len(runner.got))

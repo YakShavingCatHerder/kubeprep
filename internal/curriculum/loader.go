@@ -51,26 +51,9 @@ type Registry struct {
 	order     []string
 }
 
-// NewRegistry loads the embedded core pack followed by explicitly selected
-// local packs. Scenario IDs must be unique across every source.
-func NewRegistry(localPackDirectories ...string) (*Registry, error) {
-	sources := []Source{{Name: "core", FS: corepack.Files}}
-	for _, directory := range localPackDirectories {
-		clean := filepath.Clean(directory)
-		info, statErr := os.Stat(clean)
-		if statErr != nil {
-			return nil, fmt.Errorf("open local scenario pack %q: %w", directory, statErr)
-		}
-		if !info.IsDir() {
-			return nil, fmt.Errorf("open local scenario pack %q: not a directory", directory)
-		}
-		absolute, absErr := containedRoot(clean)
-		if absErr != nil {
-			return nil, fmt.Errorf("open local scenario pack %q: %w", directory, absErr)
-		}
-		sources = append(sources, Source{Name: absolute, FS: containedDirFS{root: absolute}})
-	}
-	return NewRegistryFromSources(sources...)
+// NewRegistry loads the embedded core pack.
+func NewRegistry() (*Registry, error) {
+	return NewRegistryFromSources(Source{Name: "core", FS: corepack.Files})
 }
 
 // NewRegistryFromDirectory loads one on-disk pack without the embedded core pack.

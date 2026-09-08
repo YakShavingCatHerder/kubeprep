@@ -62,11 +62,6 @@ func (c Catalog) UniqueLabs() []LabRef {
 	return refs
 }
 
-// ScenarioRefs is UniqueLabs as a flat id/path list for loaders and tests.
-func (c Catalog) ScenarioRefs() []LabRef {
-	return c.UniqueLabs()
-}
-
 func (c Catalog) ScenarioIDs() []string {
 	refs := c.UniqueLabs()
 	ids := make([]string, len(refs))

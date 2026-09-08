@@ -204,7 +204,7 @@ func TestClearLearnerStateRemovesProfileAndProgress(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := store.RecordHint("shell-orientation", 1); err != nil {
+	if err := store.RecordHint("pod-creation", 1); err != nil {
 		t.Fatal(err)
 	}
 	unrelated := filepath.Join(store.Dir(), "cluster-ownership.json")

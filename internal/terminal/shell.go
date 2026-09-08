@@ -11,12 +11,11 @@ import (
 
 // ShellSession describes the environment handed to a learner's real shell.
 type ShellSession struct {
-	Kubeconfig      string
-	Namespace       string
-	ScenarioID      string
-	Objective       string
-	PackDirectories []string
-	ToolBinDir      string
+	Kubeconfig string
+	Namespace  string
+	ScenarioID string
+	Objective  string
+	ToolBinDir string
 }
 
 // ShellRunner builds a real learner shell. The scenario view hosts it in a
@@ -64,7 +63,6 @@ func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.
 		"KUBECRYPT_EXECUTABLE": executable,
 		"KUBECRYPT_LAB_SHELL":  "1",
 		"KUBECRYPT_OBJECTIVE":  session.Objective,
-		"KUBECRYPT_PACKS":      strings.Join(session.PackDirectories, string(os.PathListSeparator)),
 		"KUBECRYPT_SHELL":      shell,
 	}
 	if session.ToolBinDir != "" {
