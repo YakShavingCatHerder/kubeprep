@@ -69,11 +69,11 @@ reset:
 description: |
 # Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
 objective: |
-# kebab-case tags for mastery tracking.
+# kebab-case tags (not used for scoring today).
 concepts:
   -
 # Graded cluster state. Any legitimate kubectl path that reaches this state passes.
-# Implemented types include objectExists, fieldEquals, podReady, deploymentAvailable, containersHealthy, nodeTopology.
+# Allowed types: objectExists, fieldEquals, podReady, deploymentAvailable, containersHealthy, nodeTopology.
 checks:
   - type:
     kind:

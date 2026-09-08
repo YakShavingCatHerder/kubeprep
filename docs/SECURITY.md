@@ -2,8 +2,7 @@
 
 ## Supported version
 
-KubeCrypt is currently a proof of concept. Only the latest commit receives
-security fixes.
+KubeCrypt is early. Only the latest commit receives security fixes.
 
 ## Reporting
 
@@ -13,11 +12,10 @@ privately to the repository owner.
 
 ## Trust boundaries
 
-- Bundled curriculum is trusted only after repository review and automated
-  validation.
-- External scenario YAML is data, not executable host code.
+- Shipped curriculum is trusted after review and automated validation.
+- Lab YAML is data. It cannot run host commands.
 - KubeCrypt-owned operations use a dedicated kubeconfig and verify cluster
   identity before mutation or deletion.
-- The learner shell is intentionally unrestricted local user activity.
-  KubeCrypt scopes its default Kubernetes target but does not sandbox the user.
-- Never place production credentials in the KubeCrypt cluster.
+- The Lab Shell is the user's real shell. KubeCrypt aims kubectl at the
+  training cluster; it does not sandbox the user.
+- Never put production credentials in the KubeCrypt cluster.
