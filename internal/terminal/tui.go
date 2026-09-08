@@ -380,7 +380,7 @@ func (m scenarioViewModel) View() string {
 	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
-	header := title.Render("KubeCrypt · Kubernetes Scenario Runner") + "\n" +
+	header := title.Render("KubePrep · Kubernetes Scenario Runner") + "\n" +
 		muted.Render(fmt.Sprintf("SCENARIO %s · MODULE %s · TRACK %s", m.scenario.ScenarioID, m.scenario.Module, m.scenario.Experience))
 	header = lipgloss.NewStyle().Width(layout.Header.Width).MaxHeight(layout.Header.Height).Render(header)
 

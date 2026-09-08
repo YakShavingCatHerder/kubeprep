@@ -1,16 +1,16 @@
 .PHONY: build snapshot test test-integration lint install validate-lab ci
 
-LDFLAGS := -X github.com/YakShavingCatHerder/kubecrypt/internal/cli.Version=dev
+LDFLAGS := -X github.com/YakShavingCatHerder/kubeprep/internal/cli.Version=dev
 GOBIN := $(shell go env GOBIN)
 ifeq ($(strip $(GOBIN)),)
 GOBIN := $(shell go env GOPATH)/bin
 endif
 
 build:
-	go build -ldflags="$(LDFLAGS)" -o bin/kubecrypt ./cmd/kubecrypt
+	go build -ldflags="$(LDFLAGS)" -o bin/kubeprep ./cmd/kubeprep
 	@mkdir -p "$(GOBIN)"
-	@cp bin/kubecrypt "$(GOBIN)/kubecrypt"
-	@echo "installed $(GOBIN)/kubecrypt"
+	@cp bin/kubeprep "$(GOBIN)/kubeprep"
+	@echo "installed $(GOBIN)/kubeprep"
 	@case ":$$PATH:" in \
 	  *":$(GOBIN):"*) ;; \
 	  *) \
@@ -37,8 +37,8 @@ lint:
 CURRICULUM ?= curriculum
 
 validate-lab:
-	go build -ldflags="$(LDFLAGS)" -o bin/kubecrypt ./cmd/kubecrypt
-	./bin/kubecrypt lab validate "$(CURRICULUM)"
+	go build -ldflags="$(LDFLAGS)" -o bin/kubeprep ./cmd/kubeprep
+	./bin/kubeprep lab validate "$(CURRICULUM)"
 
 # Matches the GitHub unit job (not the kind integration job).
 ci:

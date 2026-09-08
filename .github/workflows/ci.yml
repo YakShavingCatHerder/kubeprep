@@ -37,4 +37,4 @@ jobs:
           version: v0.32.0
       - run: go test -tags=integration -timeout=15m ./tests/integration
         env:
-          KUBECRYPT_INTEGRATION: "1"
+          KUBEPREP_INTEGRATION: "1"

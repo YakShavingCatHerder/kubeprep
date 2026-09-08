@@ -189,7 +189,7 @@ func TestVerifyOwnershipChecksMarker(t *testing.T) {
 	}
 }
 
-func TestSetContextNamespacePinsKubecryptWorkspace(t *testing.T) {
+func TestSetContextNamespacePinsKubeprepWorkspace(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	ca, fingerprint := testCA(t)
 	identity := Identity{
@@ -199,17 +199,17 @@ func TestSetContextNamespacePinsKubecryptWorkspace(t *testing.T) {
 	}
 	writeIdentityForTest(t, paths, identity)
 	runner := ownershipOKRunner(t, identity, ca, func(command Command) (Result, error) {
-		want := []string{"config", "set-context", "--current", "--namespace", "kubecrypt-beginner"}
+		want := []string{"config", "set-context", "--current", "--namespace", "kubeprep-beginner"}
 		if command.Name == "kubectl" && slices.Equal(command.Args, want) {
 			return Result{}, nil
 		}
 		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
 	})
 
-	if err := NewManagerWithPaths(runner, paths).SetContextNamespace(context.Background(), "kubecrypt-beginner"); err != nil {
+	if err := NewManagerWithPaths(runner, paths).SetContextNamespace(context.Background(), "kubeprep-beginner"); err != nil {
 		t.Fatalf("SetContextNamespace() error = %v", err)
 	}
-	if got := countCommand(runner.got, "kubectl", "config", "set-context", "--current", "--namespace", "kubecrypt-beginner"); got != 1 {
+	if got := countCommand(runner.got, "kubectl", "config", "set-context", "--current", "--namespace", "kubeprep-beginner"); got != 1 {
 		t.Fatalf("set-context called %d times, want 1", got)
 	}
 }
@@ -238,12 +238,12 @@ func TestSetContextNamespaceAllowsDefault(t *testing.T) {
 
 func TestSetContextNamespaceRejectsUnscopedNamespace(t *testing.T) {
 	err := NewManagerWithPaths(&fakeRunner{}, PathsForDirectory(t.TempDir())).SetContextNamespace(context.Background(), "kube-system")
-	if err == nil || !strings.Contains(err.Error(), "kubecrypt-") {
-		t.Fatalf("SetContextNamespace() error = %v, want kubecrypt-* refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "kubeprep-") {
+		t.Fatalf("SetContextNamespace() error = %v, want kubeprep-* refusal", err)
 	}
 }
 
-func TestWipeWorkspaceDeletesKubecryptNamespace(t *testing.T) {
+func TestWipeWorkspaceDeletesKubeprepNamespace(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	ca, fingerprint := testCA(t)
 	identity := Identity{
@@ -253,17 +253,17 @@ func TestWipeWorkspaceDeletesKubecryptNamespace(t *testing.T) {
 	}
 	writeIdentityForTest(t, paths, identity)
 	runner := ownershipOKRunner(t, identity, ca, func(command Command) (Result, error) {
-		want := []string{"delete", "namespace", "kubecrypt-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"}
+		want := []string{"delete", "namespace", "kubeprep-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"}
 		if command.Name == "kubectl" && slices.Equal(command.Args, want) {
 			return Result{}, nil
 		}
 		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
 	})
 
-	if err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubecrypt-beginner"); err != nil {
+	if err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubeprep-beginner"); err != nil {
 		t.Fatalf("WipeWorkspace() error = %v", err)
 	}
-	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubecrypt-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 1 {
+	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubeprep-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 1 {
 		t.Fatalf("namespace delete called %d times, want 1", got)
 	}
 }
@@ -281,8 +281,8 @@ func TestWipeWorkspaceRejectsUnscopedNamespace(t *testing.T) {
 		return Result{}, fmt.Errorf("unexpected command: %s %v", command.Name, command.Args)
 	}}
 	err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kube-system")
-	if err == nil || !strings.Contains(err.Error(), "kubecrypt-") {
-		t.Fatalf("WipeWorkspace() error = %v, want kubecrypt-* refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "kubeprep-") {
+		t.Fatalf("WipeWorkspace() error = %v, want kubeprep-* refusal", err)
 	}
 	if len(runner.got) != 0 {
 		t.Fatalf("commands = %d, want none after namespace refusal", len(runner.got))
@@ -308,11 +308,11 @@ func TestWipeWorkspaceRejectsUnrelatedCurrentContext(t *testing.T) {
 		}
 	}}
 
-	err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubecrypt-beginner")
+	err := NewManagerWithPaths(runner, paths).WipeWorkspace(context.Background(), "kubeprep-beginner")
 	if !errors.Is(err, ErrOwnershipMismatch) {
 		t.Fatalf("WipeWorkspace() error = %v, want ErrOwnershipMismatch", err)
 	}
-	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubecrypt-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 0 {
+	if got := countCommand(runner.got, "kubectl", "delete", "namespace", "kubeprep-beginner", "--ignore-not-found=true", "--wait=true", "--timeout=60s"); got != 0 {
 		t.Fatalf("namespace delete called %d times after ownership rejection", got)
 	}
 }
@@ -353,7 +353,7 @@ func testCA(t *testing.T) (string, string) {
 	}
 	template := &x509.Certificate{
 		SerialNumber:          big.NewInt(1),
-		Subject:               pkix.Name{CommonName: "kubecrypt-test-ca"},
+		Subject:               pkix.Name{CommonName: "kubeprep-test-ca"},
 		NotBefore:             time.Unix(0, 0),
 		NotAfter:              time.Unix(4102444800, 0),
 		IsCA:                  true,

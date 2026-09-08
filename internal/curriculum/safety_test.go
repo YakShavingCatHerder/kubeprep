@@ -11,7 +11,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: escape
-  namespace: kubecrypt-example
+  namespace: kubeprep-example
 spec:
   containers:
     - name: escape
@@ -34,7 +34,7 @@ metadata:
   namespace: default
 `)
 	err := validateManifestSafety("unsafe.yaml", manifest)
-	if err == nil || !strings.Contains(err.Error(), "kubecrypt-*") {
+	if err == nil || !strings.Contains(err.Error(), "kubeprep-*") {
 		t.Fatalf("validateManifestSafety() error = %v", err)
 	}
 }
@@ -45,7 +45,7 @@ apiVersion: v1
 kind: Pod
 metadata:
   name: test-workload
-  namespace: kubecrypt-example
+  namespace: kubeprep-example
 spec:
   containers:
     - name: workload

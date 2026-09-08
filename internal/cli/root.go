@@ -11,11 +11,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/YakShavingCatHerder/kubecrypt/internal/cluster"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/game"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/terminal"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/validator"
+	"github.com/YakShavingCatHerder/kubeprep/internal/cluster"
+	"github.com/YakShavingCatHerder/kubeprep/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubeprep/internal/game"
+	"github.com/YakShavingCatHerder/kubeprep/internal/terminal"
+	"github.com/YakShavingCatHerder/kubeprep/internal/validator"
 	"github.com/spf13/cobra"
 )
 
@@ -38,7 +38,7 @@ func Execute() error {
 
 func (a *app) rootCommand() *cobra.Command {
 	root := &cobra.Command{
-		Use:           "kubecrypt",
+		Use:           "kubeprep",
 		Short:         "Run Kubernetes certification training scenarios",
 		Version:       Version,
 		Args:          cobra.NoArgs,
@@ -48,7 +48,7 @@ func (a *app) rootCommand() *cobra.Command {
 			return cmd.Help()
 		},
 	}
-	root.SetVersionTemplate("{{printf \"kubecrypt %s\\n\" .Version}}")
+	root.SetVersionTemplate("{{printf \"kubeprep %s\\n\" .Version}}")
 	root.SetIn(a.in)
 	root.SetOut(a.out)
 	root.SetErr(a.err)
@@ -80,7 +80,7 @@ func (a *app) rootCommand() *cobra.Command {
 
 // learnerUsageTemplate is Cobra's default usage text without the special-case
 // that always lists a command named "help". Root usage is a single line
-// (`kubecrypt [command] [flags]`) instead of separate flag and command lines.
+// (`kubeprep [command] [flags]`) instead of separate flag and command lines.
 const learnerUsageTemplate = `Usage:{{if and .Runnable .HasAvailableSubCommands}}
   {{.CommandPath}} [command]{{if .HasAvailableFlags}} [flags]{{end}}{{else if .Runnable}}
   {{.UseLine}}{{else if .HasAvailableSubCommands}}
@@ -309,7 +309,7 @@ func resolveContributeLab(name string) (string, error) {
 }
 
 func (a *app) prepareTry(source string) (func(), error) {
-	packDir, err := os.MkdirTemp("", "kubecrypt-try-")
+	packDir, err := os.MkdirTemp("", "kubeprep-try-")
 	if err != nil {
 		return nil, fmt.Errorf("lab try: %w", err)
 	}
@@ -382,7 +382,7 @@ func (a *app) runStart(cmd *cobra.Command, track string, prepareOnly bool) error
 		return err
 	}
 	if prepareOnly {
-		fmt.Fprintf(cmd.OutOrStdout(), "KubeCrypt cluster verified and %s prepared.\n", scenario.Title)
+		fmt.Fprintf(cmd.OutOrStdout(), "KubePrep cluster verified and %s prepared.\n", scenario.Title)
 		return nil
 	}
 	return a.runTrainingSession(cmd.Context(), scenario, manager, store)
@@ -481,7 +481,7 @@ func (a *app) resetCommand() *cobra.Command {
 				return err
 			}
 			if _, err := manager.VerifyOwnership(cmd.Context()); err != nil {
-				return fmt.Errorf("run kubecrypt start before resetting a lab: %w", err)
+				return fmt.Errorf("run kubeprep start before resetting a lab: %w", err)
 			}
 			if err := waitFor(cmd.OutOrStdout(), "Resetting "+scenario.Title, func() error {
 				return restoreLabCluster(cmd.Context(), scenario, registry, manager)
@@ -491,7 +491,7 @@ func (a *app) resetCommand() *cobra.Command {
 			if err := store.ResetScenarioProgress(scenario.ID); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s reset. Run kubecrypt start to continue.\n", scenario.Title)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s reset. Run kubeprep start to continue.\n", scenario.Title)
 			return nil
 		},
 	}
@@ -506,9 +506,9 @@ func (a *app) destroyCommand() *cobra.Command {
 		Use:   "destroy",
 		Short: "Destroy the training cluster",
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			prompt := "Destroy the KubeCrypt cluster?"
+			prompt := "Destroy the KubePrep cluster?"
 			if all {
-				prompt = "Destroy the KubeCrypt cluster and clear all learner progress?"
+				prompt = "Destroy the KubePrep cluster and clear all learner progress?"
 			}
 			if err := a.confirm(cmd, force, prompt); err != nil {
 				return err

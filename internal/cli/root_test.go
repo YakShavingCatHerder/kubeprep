@@ -8,8 +8,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/YakShavingCatHerder/kubecrypt/internal/curriculum"
-	"github.com/YakShavingCatHerder/kubecrypt/internal/game"
+	"github.com/YakShavingCatHerder/kubeprep/internal/curriculum"
+	"github.com/YakShavingCatHerder/kubeprep/internal/game"
 	"github.com/spf13/cobra"
 )
 
@@ -20,13 +20,13 @@ func TestBareCommandShowsHelp(t *testing.T) {
 	root.SetArgs([]string{})
 
 	if err := root.ExecuteContext(context.Background()); err != nil {
-		t.Fatalf("kubecrypt: %v", err)
+		t.Fatalf("kubeprep: %v", err)
 	}
 	got := output.String()
-	if !strings.Contains(got, "kubecrypt [command] [flags]") {
+	if !strings.Contains(got, "kubeprep [command] [flags]") {
 		t.Errorf("help missing combined usage:\n%s", got)
 	}
-	if strings.Contains(got, "kubecrypt [flags]\n") || strings.Contains(got, "  kubecrypt [command]\n") {
+	if strings.Contains(got, "kubeprep [flags]\n") || strings.Contains(got, "  kubeprep [command]\n") {
 		t.Errorf("help still splits usage onto two lines:\n%s", got)
 	}
 	for _, want := range []string{"start", "lab", "status", "reset", "destroy", "doctor"} {
@@ -78,7 +78,7 @@ func TestRootReportsVersion(t *testing.T) {
 	if err := root.ExecuteContext(context.Background()); err != nil {
 		t.Fatalf("--version: %v", err)
 	}
-	if got := strings.TrimSpace(output.String()); got != "kubecrypt test-0.1.0" {
+	if got := strings.TrimSpace(output.String()); got != "kubeprep test-0.1.0" {
 		t.Fatalf("--version = %q", got)
 	}
 }
@@ -122,7 +122,7 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 }
 
 func TestPinLabWorkspaceUsesDeclaredOrDefault(t *testing.T) {
-	if got := contextNamespaceForLab(&curriculum.Scenario{Namespace: "kubecrypt-beginner"}); got != "kubecrypt-beginner" {
+	if got := contextNamespaceForLab(&curriculum.Scenario{Namespace: "kubeprep-beginner"}); got != "kubeprep-beginner" {
 		t.Fatalf("declared namespace = %q", got)
 	}
 	if got := contextNamespaceForLab(&curriculum.Scenario{}); got != "default" {
@@ -441,14 +441,14 @@ func writeCLITryLab(t *testing.T, dir, name string) string {
 	filename := filepath.Join(dir, name)
 	const body = `authoring:
   section: workloads
-apiVersion: kubecrypt.io/v1alpha1
+apiVersion: kubeprep.io/v1alpha1
 id: test-scenario
 mode: challenge
 title: Test Scenario
 description: Restore the workload.
 revision: 2026-09
 module: workloads
-namespace: kubecrypt-test
+namespace: kubeprep-test
 difficulty: 1
 kubernetes:
   min: "1.35"
@@ -465,7 +465,7 @@ setup:
 checks:
   - type: objectExists
     kind: pod
-    namespace: kubecrypt-test
+    namespace: kubeprep-test
     name: nginx
 hints:
   - conceptual

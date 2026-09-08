@@ -32,7 +32,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("object exists", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"metadata":{"name":"test-record"}}`}}}
 		result, err := (ObjectExists{
-			Kind: "configmap", Namespace: "kubecrypt-test", Name: "test-record",
+			Kind: "configmap", Namespace: "kubeprep-test", Name: "test-record",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
 			t.Fatal(err)
@@ -57,7 +57,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("field differs", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"data":{"status":"pending"}}`}}}
 		result, err := (FieldEquals{
-			Kind: "configmap", Namespace: "kubecrypt-test", Name: "test-record",
+			Kind: "configmap", Namespace: "kubeprep-test", Name: "test-record",
 			Field: "data.status", Value: "admitted",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -70,7 +70,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("field matches", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"data":{"status":"admitted"}}`}}}
 		result, err := (FieldEquals{
-			Kind: "configmap", Namespace: "kubecrypt-test", Name: "test-record",
+			Kind: "configmap", Namespace: "kubeprep-test", Name: "test-record",
 			Field: "data.status", Value: "admitted",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -82,7 +82,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("indexed container image matches", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.27"}]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
+			Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -94,7 +94,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("indexed container image differs", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[{"name":"nginx","image":"nginx:1.26"}]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
+			Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -107,7 +107,7 @@ func TestObjectExistsAndFieldEquals(t *testing.T) {
 	t.Run("missing indexed field is wrong", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"spec":{"containers":[]}}`}}}
 		result, err := (FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
+			Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		}).Evaluate(context.Background(), runner)
 		if err != nil {
@@ -145,7 +145,7 @@ func TestDeploymentExistsStates(t *testing.T) {
 			err:    errors.New("exit status 1"),
 		}}}
 
-		result, err := (DeploymentExists{Namespace: "kubecrypt-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
+		result, err := (DeploymentExists{Namespace: "kubeprep-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
 		if err != nil {
 			t.Fatalf("Evaluate() error = %v", err)
 		}
@@ -155,12 +155,12 @@ func TestDeploymentExistsStates(t *testing.T) {
 
 	t.Run("success when present", func(t *testing.T) {
 		runner := &fakeRunner{responses: []fakeResponse{{output: `{"metadata":{"name":"test-workload"}}`}}}
-		result, err := (DeploymentExists{Namespace: "kubecrypt-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
+		result, err := (DeploymentExists{Namespace: "kubeprep-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
 		if err != nil {
 			t.Fatalf("Evaluate() error = %v", err)
 		}
 		assertStatus(t, result, Success)
-		wantArgs := []string{"get", "deployment", "test-workload", "--namespace", "kubecrypt-test", "--output=json"}
+		wantArgs := []string{"get", "deployment", "test-workload", "--namespace", "kubeprep-test", "--output=json"}
 		if !reflect.DeepEqual(runner.calls[0], wantArgs) {
 			t.Fatalf("runner args = %#v, want %#v", runner.calls[0], wantArgs)
 		}
@@ -203,7 +203,7 @@ func TestDeploymentAvailableStates(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeRunner{responses: []fakeResponse{{output: tt.json}}}
-			result, err := (DeploymentAvailable{Namespace: "kubecrypt-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
+			result, err := (DeploymentAvailable{Namespace: "kubeprep-test", Name: "test-workload"}).Evaluate(context.Background(), runner)
 			if err != nil {
 				t.Fatalf("Evaluate() error = %v", err)
 			}
@@ -216,7 +216,7 @@ func TestDeploymentAvailableStates(t *testing.T) {
 func TestDeploymentAvailableRequiresAuthoredReplicaCount(t *testing.T) {
 	runner := &fakeRunner{responses: []fakeResponse{{output: `{"metadata":{"name":"front-desk","generation":1},"spec":{"replicas":0},"status":{"observedGeneration":1,"availableReplicas":0}}`}}}
 	result, err := (DeploymentAvailable{
-		Namespace: "kubecrypt-front-desk", Name: "front-desk", RequiredReplicas: 1,
+		Namespace: "kubeprep-front-desk", Name: "front-desk", RequiredReplicas: 1,
 	}).Evaluate(context.Background(), runner)
 	if err != nil {
 		t.Fatal(err)
@@ -267,7 +267,7 @@ func TestPodReadyStates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			runner := &fakeRunner{responses: []fakeResponse{{output: tt.json}}}
 			result, err := (PodReady{
-				Namespace: "kubecrypt-test",
+				Namespace: "kubeprep-test",
 				Selector:  "app=test-workload",
 				MinReady:  tt.minReady,
 			}).Evaluate(context.Background(), runner)
@@ -323,7 +323,7 @@ func TestContainersHealthyStates(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			item := `{"metadata":{"name":"test-workload-a"},"status":{"phase":"Running","containerStatuses":[{"name":"workload","state":` + tt.state + `}]}}`
 			runner := &fakeRunner{responses: []fakeResponse{{output: podList(item)}}}
-			result, err := (ContainersHealthy{Namespace: "kubecrypt-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
+			result, err := (ContainersHealthy{Namespace: "kubeprep-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
 			if err != nil {
 				t.Fatalf("Evaluate() error = %v", err)
 			}
@@ -343,7 +343,7 @@ func TestContainersHealthyWrongOutranksEarlierConvergingState(t *testing.T) {
 	}`
 	runner := &fakeRunner{responses: []fakeResponse{{output: podList(item)}}}
 
-	result, err := (ContainersHealthy{Namespace: "kubecrypt-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
+	result, err := (ContainersHealthy{Namespace: "kubeprep-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
 	if err != nil {
 		t.Fatalf("Evaluate() error = %v", err)
 	}
@@ -353,7 +353,7 @@ func TestContainersHealthyWrongOutranksEarlierConvergingState(t *testing.T) {
 
 func TestMalformedOutputIsExplainableError(t *testing.T) {
 	runner := &fakeRunner{responses: []fakeResponse{{output: `not-json`}}}
-	result, err := (PodReady{Namespace: "kubecrypt-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
+	result, err := (PodReady{Namespace: "kubeprep-test", Selector: "app=test-workload"}).Evaluate(context.Background(), runner)
 	if err == nil {
 		t.Fatal("Evaluate() error = nil, want malformed output error")
 	}
@@ -380,9 +380,9 @@ func TestAllCombinesResultsWithDeterministicSeverity(t *testing.T) {
 
 func TestPodCreationChecksGradeStoredObject(t *testing.T) {
 	checks := All(
-		ObjectExists{Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx"},
+		ObjectExists{Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx"},
 		FieldEquals{
-			Kind: "pod", Namespace: "kubecrypt-beginner", Name: "nginx",
+			Kind: "pod", Namespace: "kubeprep-beginner", Name: "nginx",
 			Field: "spec.containers[0].image", Value: "nginx:1.27",
 		},
 	)
@@ -432,7 +432,7 @@ func TestPodCreationChecksGradeStoredObject(t *testing.T) {
 func TestNewCheck(t *testing.T) {
 	check, err := NewCheck(Definition{
 		Type:      CheckPodReady,
-		Namespace: "kubecrypt-test",
+		Namespace: "kubeprep-test",
 		Selector:  "app=test-workload",
 		MinReady:  2,
 	})

@@ -50,7 +50,7 @@ type Store struct {
 }
 
 // NewStore creates a learner state store. By default, files live in the
-// operating system's user config directory under "kubecrypt".
+// operating system's user config directory under "kubeprep".
 func NewStore(options ...StoreOption) (*Store, error) {
 	settings := storeOptions{
 		now: time.Now,
@@ -66,7 +66,7 @@ func NewStore(options ...StoreOption) (*Store, error) {
 		if err != nil {
 			return nil, fmt.Errorf("locate user config directory: %w", err)
 		}
-		settings.configDir = filepath.Join(configDir, "kubecrypt")
+		settings.configDir = filepath.Join(configDir, "kubeprep")
 	}
 	if settings.now == nil {
 		return nil, errors.New("create learner state store: clock must not be nil")

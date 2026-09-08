@@ -1,6 +1,6 @@
 # Architecture
 
-The `kubecrypt` process owns learner progress, the curriculum pack embedded
+The `kubeprep` process owns learner progress, the curriculum pack embedded
 from `curriculum/` at compile time, `kind` lifecycle, state checks, and a
 split terminal: scenario pane plus a real PTY Lab Shell.
 
@@ -9,7 +9,7 @@ split terminal: scenario pane plus a real PTY Lab Shell.
 - `lab publish` writes `./curriculum` and starts that copy from disk. Rebuild
   before `start` sees it.
 
-The Lab Shell gets a dedicated kubeconfig. KubeCrypt mutations verify cluster
+The Lab Shell gets a dedicated kubeconfig. KubePrep mutations verify cluster
 ownership themselves; they do not trust the shell or the user's current
 context.
 

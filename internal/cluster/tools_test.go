@@ -160,7 +160,7 @@ func TestEnsureToolsCopiesMatchingPATHBinary(t *testing.T) {
 func TestRequireToolsReportsMissingBinaries(t *testing.T) {
 	paths := PathsForDirectory(t.TempDir())
 	err := RequireTools(paths)
-	if err == nil || !strings.Contains(err.Error(), "kubecrypt doctor") {
+	if err == nil || !strings.Contains(err.Error(), "kubeprep doctor") {
 		t.Fatalf("RequireTools() error = %v, want a doctor remediation", err)
 	}
 }

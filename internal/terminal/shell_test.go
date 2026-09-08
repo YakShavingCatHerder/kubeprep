@@ -9,11 +9,11 @@ import (
 
 func TestScopedEnvironmentReplacesSensitiveValues(t *testing.T) {
 	got := scopedEnvironment(
-		[]string{"PATH=/bin", "KUBECONFIG=/unsafe", "KUBECRYPT_SCENARIO=old", "TERM=dumb"},
+		[]string{"PATH=/bin", "KUBECONFIG=/unsafe", "KUBEPREP_SCENARIO=old", "TERM=dumb"},
 		map[string]string{
-			"KUBECONFIG":         "/safe/config",
-			"KUBECRYPT_SCENARIO": "pod-creation",
-			"TERM":               "xterm-256color",
+			"KUBECONFIG":        "/safe/config",
+			"KUBEPREP_SCENARIO": "pod-creation",
+			"TERM":              "xterm-256color",
 		},
 	)
 
@@ -26,7 +26,7 @@ func TestScopedEnvironmentReplacesSensitiveValues(t *testing.T) {
 	for _, want := range []string{
 		"PATH=/bin",
 		"KUBECONFIG=/safe/config",
-		"KUBECRYPT_SCENARIO=pod-creation",
+		"KUBEPREP_SCENARIO=pod-creation",
 		"TERM=xterm-256color",
 	} {
 		if !slices.Contains(got, want) {
@@ -47,16 +47,16 @@ func TestScopedEnvironmentPrependsToolBinDir(t *testing.T) {
 			return "", false
 		},
 		Environ:    func() []string { return []string{"PATH=/usr/bin:/bin"} },
-		Executable: func() (string, error) { return "/usr/local/bin/kubecrypt", nil },
+		Executable: func() (string, error) { return "/usr/local/bin/kubeprep", nil },
 	}
 	cmd, err := runner.Command(context.Background(), ShellSession{
 		Kubeconfig: "/tmp/kubeconfig",
-		ToolBinDir: "/tmp/kubecrypt/bin",
+		ToolBinDir: "/tmp/kubeprep/bin",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := "PATH=/tmp/kubecrypt/bin:/usr/bin:/bin"
+	want := "PATH=/tmp/kubeprep/bin:/usr/bin:/bin"
 	if !slices.Contains(cmd.Env, want) {
 		t.Fatalf("PATH override missing %q in %v", want, cmd.Env)
 	}

@@ -50,7 +50,7 @@ func TestLoadDocumentKeepsAuthoringNotes(t *testing.T) {
 	scenario := validScenario()
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
-	scenario.Namespace = "kubecrypt-beginner"
+	scenario.Namespace = "kubeprep-beginner"
 	body, err := yaml.Marshal(scenario)
 	if err != nil {
 		t.Fatal(err)
@@ -99,7 +99,7 @@ func TestLoadFilePodCreation(t *testing.T) {
 	if scenario.Mode != "challenge" {
 		t.Fatalf("mode = %q, want challenge", scenario.Mode)
 	}
-	if scenario.Namespace != "kubecrypt-beginner" {
+	if scenario.Namespace != "kubeprep-beginner" {
 		t.Fatalf("namespace = %q", scenario.Namespace)
 	}
 	if len(scenario.Setup.Manifests) != 0 {
@@ -112,7 +112,7 @@ func TestLoadFilePodCreation(t *testing.T) {
 		t.Fatalf("checks = %d, want 2", len(scenario.Checks))
 	}
 	exists := scenario.Checks[0]
-	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubecrypt-beginner" || exists.Name != "nginx" {
+	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubeprep-beginner" || exists.Name != "nginx" {
 		t.Fatalf("objectExists check = %#v", exists)
 	}
 	image := scenario.Checks[1]
@@ -178,7 +178,7 @@ func TestRegistryLoadsLocalPack(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !bytes.Contains(manifest, []byte("kubecrypt-test")) {
+	if !bytes.Contains(manifest, []byte("kubeprep-test")) {
 		t.Fatalf("unexpected manifest: %s", manifest)
 	}
 }
@@ -285,7 +285,7 @@ func TestValidateScenario(t *testing.T) {
 		{"unsafe manifest reference", func(s *Scenario) { s.Setup.Manifests[0] = "../workload.yaml" }, "clean relative path"},
 		{"unknown typed check", func(s *Scenario) { s.Checks[0].Type = "runCommand" }, "unsupported check"},
 		{"inverted Kubernetes range", func(s *Scenario) { s.Kubernetes.Min = "1.36" }, "newer than"},
-		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubecrypt-*"},
+		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubeprep-*"},
 		{"challenge without start state", func(s *Scenario) { s.Setup.Manifests = nil; s.Reset.Manifests = nil }, "must contain at least one manifest"},
 		{"mode must be challenge", func(s *Scenario) { s.Mode = "orientation" }, "want challenge"},
 		{"unimplemented check type", func(s *Scenario) { s.Checks[0].Type = "serviceReachable" }, "unsupported check"},
@@ -306,7 +306,7 @@ func TestValidateAllowsChallengeNamespaceWithoutManifests(t *testing.T) {
 	scenario := validScenario()
 	scenario.Setup.Manifests = nil
 	scenario.Reset.Manifests = nil
-	scenario.Namespace = "kubecrypt-beginner"
+	scenario.Namespace = "kubeprep-beginner"
 	if err := Validate(scenario); err != nil {
 		t.Fatalf("Validate(): %v", err)
 	}
@@ -337,7 +337,7 @@ func validScenario() *Scenario {
 		Concepts:    []string{"pods"},
 		Setup:       ResourceSet{Manifests: []string{"workload.yaml"}},
 		Checks: []Check{{
-			Type: CheckDeploymentAvailable, Namespace: "kubecrypt-test", Name: "test", Replicas: &replicas,
+			Type: CheckDeploymentAvailable, Namespace: "kubeprep-test", Name: "test", Replicas: &replicas,
 		}},
 		Hints:      []string{"conceptual", "procedural", "explicit"},
 		Completion: "The workload is available.",
@@ -368,13 +368,13 @@ func packFS(scenarioData []byte) fstest.MapFS {
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kubecrypt-test
+  name: kubeprep-test
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test
-  namespace: kubecrypt-test
+  namespace: kubeprep-test
 `)},
 	}
 }
@@ -386,13 +386,13 @@ func scenarioFS(scenarioData []byte) fstest.MapFS {
 apiVersion: v1
 kind: Namespace
 metadata:
-  name: kubecrypt-test
+  name: kubeprep-test
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: test
-  namespace: kubecrypt-test
+  namespace: kubeprep-test
 `)},
 	}
 }

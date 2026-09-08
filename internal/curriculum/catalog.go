@@ -6,7 +6,7 @@ import (
 	"strings"
 )
 
-const CatalogAPIVersionV1Alpha1 = "kubecrypt.io/catalog/v1alpha1"
+const CatalogAPIVersionV1Alpha1 = "kubeprep.io/catalog/v1alpha1"
 
 // Catalog defines one scenario pack as learner paths of sections of labs.
 // Play order is the nested list. A lab id may appear on more than one path;

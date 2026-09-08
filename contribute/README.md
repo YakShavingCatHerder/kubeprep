@@ -4,7 +4,7 @@ Labs are YAML. Learners use a real shell on a dedicated `kind` cluster. The
 runner grades cluster state, so any legitimate `kubectl` path can pass. You do
 not need to write Go.
 
-This directory is a scratch pad. `kubecrypt start` does not load it. A lab
+This directory is a scratch pad. `kubeprep start` does not load it. A lab
 shows up in `start` only after it is under `curriculum/` **and** you rebuild.
 Until then: `lab try` (draft) or `lab publish` (write the pack, run that copy).
 
@@ -30,7 +30,7 @@ Start from a broken or incomplete cluster. Reset must restore that same start.
 ## Try
 
 ```sh
-kubecrypt lab try test-lab.yaml
+kubeprep lab try test-lab.yaml
 ```
 
 Validates the file, checks sidecar manifests, builds a one-lab overlay in a
@@ -41,7 +41,7 @@ restored when you leave.
 ## Publish
 
 ```sh
-kubecrypt lab publish test-lab.yaml
+kubeprep lab publish test-lab.yaml
 ```
 
 Copies to `curriculum/{section}/{id}.yaml`, appends the id under each track in
@@ -58,12 +58,12 @@ accepted target state, and reset. That is not a `lab publish` gate yet.
 ## Validate
 
 ```sh
-kubecrypt lab validate
+kubeprep lab validate
 make validate-lab
 ```
 
 `make validate-lab` (default `CURRICULUM=curriculum`) runs
-`kubecrypt lab validate` on a directory with `catalog.yaml`. That checks the
+`kubeprep lab validate` on a directory with `catalog.yaml`. That checks the
 labs. It does not load them into `start`.
 
 ## Catalog
@@ -101,7 +101,7 @@ Types that run (unknown names fail lab validation):
 Hints must be exactly three: concept, what to inspect, then one concrete
 command or next step. The debrief should name the real mechanism and objects.
 
-Give the lab a `kubecrypt-*` namespace. The runner creates it on start and
+Give the lab a `kubeprep-*` namespace. The runner creates it on start and
 recreates it on reset. Extra broken objects go in
 `startingClusterConfiguration` or in setup/reset YAML next to the lab file.
 

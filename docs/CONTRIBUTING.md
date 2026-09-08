@@ -1,8 +1,8 @@
-# Contributing to KubeCrypt
+# Contributing to KubePrep
 
 ## Engine
 
-1. Go 1.27 or newer and Docker. `kubecrypt doctor` installs `kind` and
+1. Go 1.27 or newer and Docker. `kubeprep doctor` installs `kind` and
    `kubectl`. CI uses Go 1.27.
 2. `make install`
 3. `make ci` (gofmt, `go vet`, lab validate, `go test -race`). CI runs the same

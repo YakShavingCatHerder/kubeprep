@@ -153,8 +153,8 @@ func validateNamespaceName(name string) error {
 	if name == "" {
 		return nil
 	}
-	if !strings.HasPrefix(name, "kubecrypt-") || !idPattern.MatchString(name) {
-		return fmt.Errorf("namespace: %q must be a kubecrypt-* name", name)
+	if !strings.HasPrefix(name, "kubeprep-") || !idPattern.MatchString(name) {
+		return fmt.Errorf("namespace: %q must be a kubeprep-* name", name)
 	}
 	return nil
 }

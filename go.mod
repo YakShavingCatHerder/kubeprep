@@ -1,4 +1,4 @@
-module github.com/YakShavingCatHerder/kubecrypt
+module github.com/YakShavingCatHerder/kubeprep
 
 go 1.27.0
 
