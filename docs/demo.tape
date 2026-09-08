@@ -24,7 +24,7 @@ Enter
 Ctrl+L
 Show
 
-Type "kubeprep start --track=beginner"
+Type "kubeprep lab try test-lab.yaml"
 Enter
 Wait+Screen@120s /LAB SHELL/
 Sleep 4s

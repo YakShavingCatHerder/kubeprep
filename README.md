@@ -8,7 +8,7 @@ This is early. The binary ships **one lab**: [First API Object](curriculum/pods/
 (`pod-creation`). Tracks Beginner, CKA, and CKAD exist; today they all play
 that lab. There is no `exam` command and no `--pack` flag.
 
-![kubeprep start opening the split lab TUI](docs/demo.gif)
+![kubeprep lab try opening the split lab TUI](docs/demo.gif)
 
 ## Requirements
 
