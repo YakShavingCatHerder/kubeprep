@@ -1,6 +1,7 @@
 # CLI → split TUI. Run from the repository root:
 #   make demo
 #
+# Needs contribute/pod-inspection.yaml (local draft; not shipped).
 # The training cluster should already exist (`make install` then
 # `kubeprep start --track=beginner --prepare-only`). Creating kind inside
 # this tape makes a minutes-long GIF of a spinner.
@@ -24,10 +25,15 @@ Enter
 Ctrl+L
 Show
 
-Type "kubeprep lab try test-lab.yaml"
+Type "kubeprep lab try pod-inspection.yaml"
 Enter
 Wait+Screen@120s /LAB SHELL/
-Sleep 4s
-Type "kubectl get pods -n kubeprep-beginner"
+Sleep 2s
+Ctrl+G
+Sleep 300ms
+Type "n"
+Wait+Screen@5s /kubectl get pod nginx/
+Sleep 2s
+Type "kubectl get pod nginx -n kubeprep-pod-inspection"
 Enter
-Sleep 3s
+Sleep 4s

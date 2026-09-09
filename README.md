@@ -4,11 +4,12 @@ KubePrep is a terminal app for practicing Kubernetes on a dedicated local
 [`kind`](https://kind.sigs.k8s.io/) cluster. You type real `kubectl` in a real
 shell. It grades the cluster that results, not the commands you used.
 
-This is early. The binary ships **one lab**: [First API Object](curriculum/pods/pod-creation.yaml)
-(`pod-creation`). Tracks Beginner, CKA, and CKAD exist; today they all play
-that lab. There is no `exam` command and no `--pack` flag.
+This is early. Beginner ships two welcome labs:
+[Meet kubectl](curriculum/welcome/kubectl-basics.yaml) then
+[First API Object](curriculum/welcome/pod-creation.yaml). CKA and CKAD currently
+play the orientation lab. There is no `exam` command and no `--pack` flag.
 
-![kubeprep lab try opening the split lab TUI](docs/demo.gif)
+![Split TUI: scenario pane with a typed command beside a real Lab Shell](docs/demo.gif)
 
 ## Requirements
 
