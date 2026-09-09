@@ -65,6 +65,7 @@ incomplete lab, you can continue to it.
 | `?` or `F1` | hint (use `?` if the editor steals `F1`) |
 | `F2` | check cluster state |
 | `F11` | zoom the Lab Shell |
+| `Alt+←` / `Alt+→` | previous / next scenario page (or `Ctrl+G` then `p`/`n`) |
 | `F10` | leave |
 
 ```sh

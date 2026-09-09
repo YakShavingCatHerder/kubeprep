@@ -21,6 +21,11 @@ what belongs there.
   `checks`.
 - The rest is the Scenario: start state, checks, hints, completion, debrief.
 
+A line that is exactly `::page::` in `description`, `objective`, `completion`,
+or `debrief.explanation` starts a new page in the left-hand scenario pane.
+Learners never see the marker. A page that is still too long for the pane
+keeps auto-splitting.
+
 Set `authoring.section` and `module` to the same section id (`pods`, `rbac`,
 …). The published path is `{section}/{id}.yaml`. `tracks` lists which
 playlists may include the lab. Play order is `catalog.yaml`, not the lab file.

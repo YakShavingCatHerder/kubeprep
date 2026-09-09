@@ -67,7 +67,10 @@ setup:
 reset:
   manifests: []
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Long pages still split if they do not fit the pane.
 description: |
+
 # Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
 objective: |
 # kebab-case tags (not used for scoring today).
@@ -116,6 +119,7 @@ hints:
 completion: |
 debrief:
   # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
   explanation: |
   # Commands worth remembering after success.
   commands:

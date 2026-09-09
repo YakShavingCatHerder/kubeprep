@@ -52,8 +52,14 @@ func TestReservedKeysAreNotForwardedToTheShell(t *testing.T) {
 		{msg: tea.KeyMsg{Type: tea.KeyF10}, action: actionQuit},
 		{msg: tea.KeyMsg{Type: tea.KeyF11}, action: actionZoom},
 		{msg: tea.KeyMsg{Type: tea.KeyCtrlG}, action: actionPrefix},
+		{msg: tea.KeyMsg{Type: tea.KeyRight, Alt: true}, action: actionPageNext},
+		{msg: tea.KeyMsg{Type: tea.KeyLeft, Alt: true}, action: actionPagePrev},
+		{msg: tea.KeyMsg{Type: tea.KeyDown, Alt: true}, action: actionPageNext},
+		{msg: tea.KeyMsg{Type: tea.KeyPgDown, Alt: true}, action: actionPageNext},
 		{msg: tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'h'}}, prefix: true, action: actionHint},
 		{msg: tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'c'}}, prefix: true, action: actionCheck},
+		{msg: tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}, prefix: true, action: actionPageNext},
+		{msg: tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'p'}}, prefix: true, action: actionPagePrev},
 	}
 	for _, tt := range tests {
 		action, reserved := reservedActionFor(tt.msg, tt.prefix, false)
