@@ -1,0 +1,240 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: welcome
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Create a bare Pod and connect the API object the learner submits to the Kubernetes components that act on it afterward."
+    # The misconception the lab should break.
+    wrongIdea: "kubectl directly starts the container, or creating a Pod is the same operation as starting its container on a Node."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "kubectl submits a Pod object to the API server, which validates and persists the requested state. The scheduler later selects a Node, kubelet on that Node works with the container runtime to start the container, and Kubernetes reports the observed result through the Pod's status."
+    # Why this lab sits here on the playlist.
+    why: "The learner has already inspected the cluster and its major components. This is the first write operation and gives those components a concrete lifecycle before later labs introduce detailed Pod inspection and troubleshooting."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "The workspace namespace is configured for the learner so namespace selection is intentionally out of scope. The namespace starts empty because the missing Pod is the incomplete state. Labels, explicit namespace targeting, detailed status inspection, logs, exec, and troubleshooting are taught in later labs."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+      namespace: kubeprep-pod-creation
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Create Pod nginx with image nginx:1.27 in the configured workspace."
+    - "Create or apply an equivalent Pod manifest with the same kind, name, namespace, and image."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Create a Deployment or another workload kind named nginx instead of a Pod."
+    - "Create Pod nginx with an image other than nginx:1.27 or outside the configured workspace namespace."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Apply a Pod manifest defining nginx with image nginx:1.27 in kubeprep-pod-creation instead of using kubectl run."
+
+# Must match authoring.section and the catalog section that lists this id.
+module: welcome
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: pod-creation
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Create Your First Pod
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-pod-creation
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: ""
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+description: |
+  You have inspected the cluster and seen components such as the API server,
+  etcd, scheduler, and kubelet. Now you are going to give Kubernetes
+  something to do.
+
+  A Pod is a Kubernetes API object that describes one or more containers that
+  should run together.
+
+  When you create a Pod with kubectl, kubectl does not directly start the
+  container. kubectl is a client for the Kubernetes API. It sends your request
+  to the API server.
+
+  From there, several Kubernetes components participate:
+
+    kubectl
+      -> API server
+      -> scheduler
+      -> kubelet
+      -> container runtime
+
+  The API server validates the Pod object and persists the cluster's state.
+  The scheduler later decides which Node should run the Pod. kubelet on that
+  Node sees the assignment and works with the container runtime to create and
+  start the requested container.
+
+  Kubernetes then reports what actually happened back through the API.
+
+  This creates a distinction that will appear throughout Kubernetes:
+
+    spec   = what you asked Kubernetes to make true
+    status = what Kubernetes currently observes
+
+  For now, focus only on creating the Pod object. Your lab workspace is already
+  selected for you, so you do not need to choose a namespace.
+
+  You may use an imperative kubectl command or submit an equivalent YAML
+  manifest. The grader evaluates the resulting Kubernetes object, not the
+  command used to create it.
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  Create a Pod named nginx using the nginx:1.27 container image.
+
+  The resulting Kubernetes object must be a Pod named nginx whose requested
+  container image is nginx:1.27.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - pod
+  - api-object
+  - api-server
+  - desired-state
+  - scheduler
+  - kubelet
+  - container-runtime
+  - pod-lifecycle
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required.
+checks:
+  - type: objectExists
+    kind: pod
+    namespace: kubeprep-pod-creation
+    name: nginx
+  - type: fieldEquals
+    kind: pod
+    namespace: kubeprep-pod-creation
+    name: nginx
+    field: spec.containers[0].image
+    value: nginx:1.27
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - "You are not starting a container directly. Your first job is to submit a Pod API object that describes the container you want Kubernetes to run."
+  - "Check whether a Pod named nginx exists and look at the image recorded in its spec. The workspace has already been selected for you."
+  - "One valid path is: kubectl run nginx --image=nginx:1.27"
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  Pod nginx exists with nginx:1.27 recorded as its requested container image.
+  The desired Pod object is now part of the cluster's state.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  explanation: |
+    The important part of this exercise was not the kubectl run syntax. It was
+    what happened because of that command.
+
+    kubectl constructed a Pod object and submitted it to the Kubernetes API
+    server. kubectl did not directly start nginx, choose a Node, or communicate
+    with the container runtime.
+
+    The API server is the front door for Kubernetes state. It validated the
+    request and persisted the desired cluster state. etcd is the backing store
+    used by the control plane for that state.
+
+    At this point, Kubernetes had a Pod object describing what you wanted:
+
+      kind: Pod
+      name: nginx
+      image: nginx:1.27
+
+    That is desired state.
+    ::page::
+
+    Creating the object did not itself decide where the Pod would run. A new
+    Pod that needs placement is observed by kube-scheduler. The scheduler
+    evaluates eligible Nodes, chooses one, and records that assignment through
+    the Kubernetes API.
+
+    kubelet runs on each Node. The kubelet on the selected Node observes that
+    nginx has been assigned there and works with the container runtime to pull
+    the image if necessary and start the container.
+
+    kubelet then reports information about the Pod and its containers back
+    through the API server.
+
+    That reported information becomes part of the Pod's observed state.
+
+    This is the relationship to remember:
+
+      spec
+        What you asked Kubernetes to make true.
+
+      status
+        What Kubernetes currently observes while trying to make it true.
+    ::page::
+
+    A Pod becoming Running or Ready is therefore not something kubectl simply
+    writes into the object. Those values reflect what Kubernetes observes
+    after other components have acted on the desired state.
+
+    The lifecycle is roughly:
+
+      kubectl submits the Pod
+        -> API server validates and persists it
+        -> scheduler selects a Node
+        -> kubelet observes the assignment
+        -> container runtime starts the container
+        -> kubelet reports observed state
+
+    This Pod is also a bare Pod. No Deployment, ReplicaSet, Job, or other
+    workload controller owns it. If you delete it, there is no higher-level
+    controller whose desired state tells Kubernetes to create a replacement.
+
+    The next Pod lab can now inspect the result using kubectl get,
+    kubectl get -o wide, kubectl describe, logs, exec, and the full Pod YAML
+    so you can see where the desired and observed parts of this lifecycle
+    appear.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl run nginx --image=nginx:1.27
+    - kubectl get pod nginx -o wide
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - Pod API object
+    - Desired state versus observed state
+    - API server and etcd
+    - Scheduler
+    - kubelet and container runtime
+    - Bare Pod lifecycle
+  # One-line domain label.
+  domain: Pods and workload lifecycle
