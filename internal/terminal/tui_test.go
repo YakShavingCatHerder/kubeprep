@@ -245,10 +245,30 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			t.Fatalf("line %d width = %d, want <= 80: %q", lineNumber+1, width, line)
 		}
 	}
-	for _, text := range []string{"OBJECTIVE", "VALIDATION", "LAB SHELL", "F2", "hint"} {
+	for _, text := range []string{"Test Scenario", "LAB SHELL", "F2", "hint"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("view does not contain %q", text)
 		}
+	}
+}
+
+func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
+	model := scenarioViewModel{
+		width:  80,
+		height: 36,
+		scenario: ScenarioView{
+			Title:     "PadProbeTitle",
+			Objective: "Inspect the cluster.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, "PadProbeTitle") {
+		t.Fatalf("title missing:\n%s", view)
+	}
+	if strings.Contains(view, "│PadProbeTitle") || strings.Contains(view, "│OBJECTIVE") {
+		t.Fatalf("scenario text sits against the border:\n%s", view)
 	}
 }
 

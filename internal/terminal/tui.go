@@ -490,7 +490,7 @@ func (m scenarioViewModel) scenarioPages() [][]string {
 	if height <= 0 {
 		height = defaultHeight
 	}
-	inner := computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario.Inner()
+	inner := computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario.Content()
 	if inner.Width < 1 {
 		inner.Width = 1
 	}
@@ -513,15 +513,21 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 	if inner.Height < 1 {
 		inner.Height = 1
 	}
+	box := inner.Inset(scenarioInnerPad)
 
-	pages := paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+	pages := paginateScenario(m.scenarioBody(), box.Width, box.Height)
 	page := clampStoryPage(m.storyPage, len(pages))
 	content := strings.Join(pages[page], "\n")
 	if hint := scenarioPageHint(page, len(pages)); hint != "" {
 		content += "\n" + muted.Render(hint)
 	}
-	content = lipgloss.NewStyle().Width(inner.Width).Height(inner.Height).MaxWidth(inner.Width).MaxHeight(inner.Height).Render(content)
-	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Width(inner.Width).Height(inner.Height).Render(content)
+	content = lipgloss.NewStyle().Width(box.Width).Height(box.Height).MaxWidth(box.Width).MaxHeight(box.Height).Render(content)
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		Padding(scenarioInnerPad).
+		Width(inner.Width).
+		Height(inner.Height).
+		Render(content)
 }
 
 func (m scenarioViewModel) shellPane(size pane) string {
