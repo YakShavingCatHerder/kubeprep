@@ -99,3 +99,69 @@ func scenarioPageHint(page, pages int) string {
 	}
 	return fmt.Sprintf("page %d/%d  Alt+←→", page+1, pages)
 }
+
+func splitScenarioCaption(box pane) (captionHeight int, story pane) {
+	story = box
+	if box.Height >= 2 {
+		return 1, pane{Width: box.Width, Height: box.Height - 1}
+	}
+	return 0, story
+}
+
+// scenarioPaneRegions is the bordered interior, a sticky caption row, and the
+// padded story box. The caption shares the first inner row with LAB SHELL.
+func scenarioPaneRegions(size pane) (inner pane, captionHeight int, story pane) {
+	inner = size.Inner()
+	if inner.Width < 1 {
+		inner.Width = 1
+	}
+	if inner.Height < 1 {
+		inner.Height = 1
+	}
+	if inner.Height >= 2 {
+		captionHeight = 1
+	}
+	story = pane{
+		Width:  inner.Width - 2*scenarioInnerPad,
+		Height: inner.Height - captionHeight - scenarioInnerPad,
+	}
+	if story.Width < 1 {
+		story.Width = 1
+	}
+	if story.Height < 1 {
+		story.Height = 1
+	}
+	return inner, captionHeight, story
+}
+
+func scenarioPaneCaption(title string, width int) string {
+	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
+	caption := "SCENARIO"
+	if name := strings.TrimSpace(title); name != "" {
+		caption += " · " + name
+	}
+	return label.Render(fitCells(caption, width))
+}
+
+func fitCells(s string, width int) string {
+	if width < 1 {
+		return ""
+	}
+	if lipgloss.Width(s) <= width {
+		return s
+	}
+	const ellipsis = "…"
+	if width <= lipgloss.Width(ellipsis) {
+		return ellipsis
+	}
+	budget := width - lipgloss.Width(ellipsis)
+	var b strings.Builder
+	for _, r := range s {
+		next := b.String() + string(r)
+		if lipgloss.Width(next) > budget {
+			break
+		}
+		b.WriteRune(r)
+	}
+	return b.String() + ellipsis
+}

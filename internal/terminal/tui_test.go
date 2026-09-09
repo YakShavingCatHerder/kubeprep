@@ -245,7 +245,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			t.Fatalf("line %d width = %d, want <= 80: %q", lineNumber+1, width, line)
 		}
 	}
-	for _, text := range []string{"Test Scenario", "LAB SHELL", "F2", "hint"} {
+	for _, text := range []string{"SCENARIO", "Test Scenario", "LAB SHELL", "F2", "hint"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("view does not contain %q", text)
 		}
@@ -267,8 +267,48 @@ func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
 	if !strings.Contains(view, "PadProbeTitle") {
 		t.Fatalf("title missing:\n%s", view)
 	}
+	if !strings.Contains(view, "SCENARIO") {
+		t.Fatalf("scenario caption missing:\n%s", view)
+	}
 	if strings.Contains(view, "│PadProbeTitle") || strings.Contains(view, "│OBJECTIVE") {
 		t.Fatalf("scenario text sits against the border:\n%s", view)
+	}
+}
+
+func TestScenarioAndShellTopBordersAlign(t *testing.T) {
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:     "Inspect a Running Pod",
+			Objective: "Inspect the cluster.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	shared := 0
+	staggered := 0
+	for _, line := range strings.Split(view, "\n") {
+		switch strings.Count(line, "┌") {
+		case 2:
+			shared++
+		case 1:
+			staggered++
+		}
+	}
+	if shared != 1 {
+		t.Fatalf("want one shared top-border row, got %d shared and %d staggered:\n%s", shared, staggered, view)
+	}
+	aligned := false
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "LAB SHELL") && strings.Contains(line, "SCENARIO ·") {
+			aligned = true
+			break
+		}
+	}
+	if !aligned {
+		t.Fatalf("SCENARIO caption and LAB SHELL should share a row:\n%s", view)
 	}
 }
 

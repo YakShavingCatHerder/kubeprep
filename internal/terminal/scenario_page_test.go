@@ -3,6 +3,8 @@ package terminal
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestClampStoryPage(t *testing.T) {
@@ -62,5 +64,25 @@ func TestLongForcedPageStillAutoSplits(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(pages[0], "\n"), "short") {
 		t.Fatalf("first page = %q", pages[0])
+	}
+}
+
+func TestFitCellsTruncatesWithEllipsis(t *testing.T) {
+	got := fitCells("SCENARIO · A Very Long Lab Title", 12)
+	if lipgloss.Width(got) > 12 {
+		t.Fatalf("width = %d, want <= 12: %q", lipgloss.Width(got), got)
+	}
+	if !strings.Contains(got, "…") {
+		t.Fatalf("expected ellipsis, got %q", got)
+	}
+}
+
+func TestSplitScenarioCaptionReservesOneRow(t *testing.T) {
+	inner, cap, story := scenarioPaneRegions(pane{Width: 40, Height: 20})
+	if inner.Width != 38 || inner.Height != 18 {
+		t.Fatalf("inner = %+v", inner)
+	}
+	if cap != 1 || story.Width != 36 || story.Height != 16 {
+		t.Fatalf("caption=%d story=%+v", cap, story)
 	}
 }

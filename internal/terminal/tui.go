@@ -430,7 +430,6 @@ func (m scenarioViewModel) scenarioBody() string {
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
 	var body strings.Builder
-	body.WriteString(label.Render(m.scenario.Title) + "\n")
 	if m.state == CheckSuccess {
 		body.WriteString(label.Render("SCENARIO COMPLETED") + "\n\n")
 		if text := strings.TrimSpace(m.scenario.Completion); text != "" {
@@ -490,14 +489,8 @@ func (m scenarioViewModel) scenarioPages() [][]string {
 	if height <= 0 {
 		height = defaultHeight
 	}
-	inner := computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario.Content()
-	if inner.Width < 1 {
-		inner.Width = 1
-	}
-	if inner.Height < 1 {
-		inner.Height = 1
-	}
-	return paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+	_, _, story := scenarioPaneRegions(computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario)
+	return paginateScenario(m.scenarioBody(), story.Width, story.Height)
 }
 
 func (m scenarioViewModel) clampedStoryPage() int {
@@ -506,25 +499,33 @@ func (m scenarioViewModel) clampedStoryPage() int {
 
 func (m scenarioViewModel) scenarioPane(size pane) string {
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
-	inner := size.Inner()
-	if inner.Width < 1 {
-		inner.Width = 1
-	}
-	if inner.Height < 1 {
-		inner.Height = 1
-	}
-	box := inner.Inset(scenarioInnerPad)
+	inner, captionHeight, story := scenarioPaneRegions(size)
 
-	pages := paginateScenario(m.scenarioBody(), box.Width, box.Height)
+	pages := paginateScenario(m.scenarioBody(), story.Width, story.Height)
 	page := clampStoryPage(m.storyPage, len(pages))
-	content := strings.Join(pages[page], "\n")
+	body := strings.Join(pages[page], "\n")
 	if hint := scenarioPageHint(page, len(pages)); hint != "" {
-		content += "\n" + muted.Render(hint)
+		body += "\n" + muted.Render(hint)
 	}
-	content = lipgloss.NewStyle().Width(box.Width).Height(box.Height).MaxWidth(box.Width).MaxHeight(box.Height).Render(content)
+	body = lipgloss.NewStyle().Width(story.Width).Height(story.Height).MaxWidth(story.Width).MaxHeight(story.Height).Render(body)
+	bodyHeight := inner.Height - captionHeight
+	if bodyHeight < 1 {
+		bodyHeight = 1
+	}
+	body = lipgloss.NewStyle().
+		Padding(0, scenarioInnerPad, scenarioInnerPad, scenarioInnerPad).
+		Width(inner.Width).
+		Height(bodyHeight).
+		MaxWidth(inner.Width).
+		MaxHeight(bodyHeight).
+		Render(body)
+
+	content := body
+	if captionHeight > 0 {
+		content = scenarioPaneCaption(m.scenario.Title, inner.Width) + "\n" + body
+	}
 	return lipgloss.NewStyle().
 		Border(lipgloss.NormalBorder()).
-		Padding(scenarioInnerPad).
 		Width(inner.Width).
 		Height(inner.Height).
 		Render(content)
