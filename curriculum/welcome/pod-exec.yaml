@@ -1,0 +1,450 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: welcome
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Use kubectl exec to run a new process inside an existing container and distinguish one-shot commands from an interactive shell."
+    # The misconception the lab should break.
+    wrongIdea: "kubectl exec is SSH into a Pod or Node, or it creates a new Pod or container."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "kubectl exec asks Kubernetes to start another process inside an existing running container. The process uses that container's filesystem and runtime environment; it does not SSH to the Node or create another workload."
+    # Why this lab sits here on the playlist.
+    why: "The learner has inspected a Pod from the outside using get, describe, YAML, and logs. This lab adds the next troubleshooting perspective: inspecting the workload from inside its running container."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "This lab is intentionally ungraded because exec activity does not produce a supported cluster-state check. The supplied nginx Pod should remain unchanged. Multi-container selection with -c, ephemeral containers, and deeper container debugging are intentionally deferred."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+      namespace: kubeprep-pod-exec
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Use kubectl exec for read-only inspection of the supplied nginx container while leaving the Pod unchanged."
+    - "Use one-shot exec commands and an interactive shell in any order while preserving the supplied workload."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Delete, replace, edit, or patch the supplied nginx Pod."
+    - "Use exec to intentionally modify the container filesystem or treat the shell as SSH access to the Node."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Run several one-shot commands without opening an interactive shell, or open the shell after first understanding the one-shot form."
+
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: pod-exec
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Run Commands Inside a Pod
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module: welcome
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-pod-exec
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: |
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+    namespace: kubeprep-pod-exec
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.27
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+description: |
+  So far, you have inspected `nginx` from outside its container.
+
+  You used `get`, `describe`, YAML, and logs to ask Kubernetes about
+  the workload.
+
+  Sometimes you need a different view.
+
+  You may need to ask:
+
+  What files exist inside the container?
+
+  What software is installed?
+
+  What does the container itself see?
+
+  `kubectl exec` lets you run a command inside an existing container.
+
+  It does not create another Pod.
+
+  It does not SSH into the Node.
+
+  ::page::
+
+  Start with one command:
+
+  ```kubectl
+  kubectl exec nginx -- nginx -v
+  ```
+
+  Read the command in two halves:
+
+  ```text
+  kubectl exec nginx
+          |
+          | ask Kubernetes to execute
+          | something in nginx
+  
+  --
+  
+  nginx -v
+      |
+      | command executed inside
+      | the container
+  ```
+
+  The `--` separates arguments for kubectl from the command that runs
+  in the container.
+
+  Everything after `--` belongs to that command.
+
+  ::page::
+
+  Try inspecting the container's filesystem:
+
+  ```kubectl
+  kubectl exec nginx -- ls /usr/share/nginx/html
+  ```
+
+  The output comes from inside the nginx container.
+
+  You are not listing files on your Lab Shell.
+
+  You are also not listing files on the Kubernetes Node.
+
+  `exec` started `ls` inside the running container.
+
+  This is a useful distinction:
+
+  ```text
+  Lab Shell
+      |
+      | kubectl exec
+      v
+  nginx container
+      |
+      | runs ls
+      v
+  container filesystem
+  ```
+
+  ::page::
+
+  A one-shot command runs, returns its output, and exits.
+
+  You can also start an interactive shell:
+
+  ```kubectl
+  kubectl exec -it nginx -- sh
+  ```
+
+  Two flags change the session.
+
+  `-i` keeps standard input open.
+
+  `-t` gives the session a terminal.
+
+  Together, they let you interact with the shell running inside the
+  container.
+
+  Try asking where you are:
+
+  ```sh
+  pwd
+  ```
+
+  Look at the nginx files:
+
+  ```sh
+  ls /usr/share/nginx/html
+  ```
+
+  Inspect the container's operating system:
+
+  ```sh
+  cat /etc/os-release
+  ```
+
+  Leave the shell when you are finished:
+
+  ```sh
+  exit
+  ```
+
+  ::page::
+
+  An interactive exec session can feel like SSH, but the mechanism is
+  different.
+
+  You did not log in to a machine.
+
+  Kubernetes started another process inside the existing nginx
+  container.
+
+  The nginx server kept running while your `sh` process also ran in
+  that container.
+
+  When you typed `exit`, the shell process ended.
+
+  The Pod and nginx server continued running.
+
+  ::page::
+
+  There is one more limitation worth knowing now.
+
+  `kubectl exec` can only run programs that exist inside the container
+  image.
+
+  The nginx image contains `sh`, so this works:
+
+  ```kubectl
+  kubectl exec -it nginx -- sh
+  ```
+
+  Another image might not contain a shell or common debugging tools.
+
+  If a command is missing, that does not automatically mean the Pod is
+  broken.
+
+  It may simply mean the executable is not part of the image.
+
+  Later troubleshooting labs will cover what to do when a container
+  has very few debugging tools.
+
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  Inspect the running `nginx` container from inside without changing
+  the workload.
+
+  Understand that exec starts another process inside an existing
+  container, and distinguish one-shot commands from an interactive
+  shell.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - kubectl-exec
+  - container
+  - process
+  - interactive-shell
+  - stdin
+  - tty
+  - container-filesystem
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
+ungraded: true
+checks: []
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - "exec starts a process inside an existing container. It does not create a new Pod and it is not SSH into the Node."
+  - "Start with a one-shot command. Pay attention to the `--` boundary before moving to an interactive shell."
+  - |
+    Try:
+
+    ```kubectl
+    kubectl exec nginx -- nginx -v
+    ```
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  You used exec to run one-shot and interactive processes inside the
+  existing nginx container.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
+  explanation: |
+    `kubectl exec` adds a new debugging perspective.
+
+    Earlier commands inspected the workload from outside:
+
+    ```text
+    get
+      -> summary
+    
+    describe
+      -> details and Events
+    
+    YAML
+      -> API object
+    
+    logs
+      -> application output
+    ```
+
+    `exec` asks a different question:
+
+    ```text
+    exec
+      -> what can I observe from
+         inside the container?
+    ```
+
+    ::page::
+
+    Consider the one-shot command:
+
+    ```kubectl
+    kubectl exec nginx -- nginx -v
+    ```
+
+    kubectl sends an exec request through Kubernetes for the existing
+    `nginx` container.
+
+    Kubernetes does not create another Pod or replace the container.
+
+    A new `nginx -v` process runs inside the existing container.
+
+    Its output is returned to your terminal.
+
+    When that process exits, the original nginx server keeps running.
+
+    ::page::
+
+    The `--` boundary matters.
+
+    ```text
+    kubectl exec nginx -- nginx -v
+    |                  |  |
+    kubectl arguments  |  command inside
+                       |
+                       separator
+    ```
+
+    This pattern prevents arguments meant for the container command
+    from being interpreted as kubectl flags.
+
+    ::page::
+
+    Interactive exec adds two flags:
+
+    ```kubectl
+    kubectl exec -it nginx -- sh
+    ```
+
+    `-i` passes standard input to the container process.
+
+    `-t` allocates a terminal for the session.
+
+    `sh` is still just another process started inside the container.
+
+    It feels interactive because your terminal's input and output are
+    connected to that process.
+
+    Typing `exit` ends `sh`.
+
+    It does not stop nginx or delete the Pod.
+
+    ::page::
+
+    `exec` is not SSH.
+
+    SSH normally connects to an SSH server running on another machine.
+
+    `kubectl exec` asks Kubernetes to execute a process in an existing
+    container.
+
+    If you exec into `nginx`, you are inspecting the container
+    environment.
+
+    You are not automatically inspecting the host Node.
+
+    ::page::
+
+    The tools available through exec come from the container image.
+
+    A container may contain:
+
+    ```text
+    sh
+    ls
+    cat
+    curl
+    package tools
+    debugging utilities
+    ```
+
+    Or it may contain almost none of them.
+
+    A missing command can therefore mean that the image does not
+    include that executable.
+
+    It does not necessarily mean Kubernetes failed.
+
+    This becomes especially important with small production images.
+
+    ::page::
+
+    You now have two basic troubleshooting perspectives:
+
+    ```text
+    Outside the container
+    
+      get
+      describe
+      YAML
+      logs
+    
+    Inside the container
+    
+      exec
+    ```
+
+    Later labs will combine these views when workloads actually fail.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl exec nginx -- nginx -v
+    - kubectl exec nginx -- ls /usr/share/nginx/html
+    - kubectl exec -it nginx -- sh
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - kubectl exec
+    - One-shot processes
+    - Interactive shells
+    - stdin and TTY
+    - Container filesystem
+    - exec versus SSH
+  # One-line domain label.
+  domain: Container inspection with kubectl exec
