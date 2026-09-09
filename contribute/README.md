@@ -26,10 +26,16 @@ or `debrief.explanation` starts a new page in the left-hand scenario pane.
 Learners never see the marker. A page that is still too long for the pane
 keeps auto-splitting.
 
-Wrap copy-paste commands in fenced blocks: a line of three backticks, the
-command, then a closing line of three backticks. Inline backticks highlight
-a token in a sentence (for example `READY`). Keep both indented inside the
-`|` block, same as `::page::`.
+Wrap copy-paste commands in fenced blocks tagged `kubectl` (or `sh`):
+
+```kubectl
+kubectl get pod nginx
+```
+
+Unlabeled fences, or `text` / `diagram` / `yaml`, render as indented diagrams.
+The pane draws a `$` in front of tagged commands; do not put `$` in the YAML.
+Inline backticks highlight a token in a sentence (for example `READY`).
+Keep fences indented inside the `|` block, same as `::page::`.
 
 Set `authoring.section` and `module` to the same section id (`welcome`, `pods`,
 `rbac`, …). The published path is `{section}/{id}.yaml`. `tracks` lists which

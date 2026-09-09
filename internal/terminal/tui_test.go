@@ -235,7 +235,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			Namespace:  "kubeprep-test",
 			Resource:   "cluster nodes",
 		},
-		storyBeats: []string{"The cluster is already running.\n```\nkubectl get nodes\n```"},
+		storyBeats: []string{"The cluster is already running.\n```kubectl\nkubectl get nodes\n```"},
 		status:     "Lab Shell is attached. Press F2 to validate cluster state.",
 		lab:        &memoryLab{view: "$ "},
 	}
