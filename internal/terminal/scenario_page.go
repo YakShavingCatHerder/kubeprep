@@ -72,12 +72,7 @@ func paginateScenario(text string, width, height int) [][]string {
 	if height < 1 {
 		height = 1
 	}
-	parts := splitForcedPages(text)
-	pages := packPages(parts, width, height)
-	if len(pages) > 1 && height > 1 {
-		pages = packPages(parts, width, height-1)
-	}
-	return pages
+	return packPages(splitForcedPages(text), width, height)
 }
 
 func clampStoryPage(page, pages int) int {
@@ -93,11 +88,11 @@ func clampStoryPage(page, pages int) int {
 	return page
 }
 
-func scenarioPageHint(page, pages int) string {
+func scenarioPageCue(page, pages int) string {
 	if pages <= 1 {
 		return ""
 	}
-	return fmt.Sprintf("page %d/%d  Alt+←→", page+1, pages)
+	return fmt.Sprintf("%d/%d", page+1, pages)
 }
 
 func splitScenarioCaption(box pane) (captionHeight int, story pane) {

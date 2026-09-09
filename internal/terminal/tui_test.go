@@ -245,10 +245,17 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			t.Fatalf("line %d width = %d, want <= 80: %q", lineNumber+1, width, line)
 		}
 	}
-	for _, text := range []string{"SCENARIO", "Test Scenario", "LAB SHELL", "F2", "hint"} {
+	for _, text := range []string{"SCENARIO", "Test Scenario", "beginner", "LAB SHELL", "F2", "hint"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("view does not contain %q", text)
 		}
+	}
+	if strings.Contains(view, "Kubernetes Scenario Runner") || strings.Contains(view, "MODULE ") {
+		t.Fatalf("window header should be quiet:\n%s", view)
+	}
+	first := strings.SplitN(view, "\n", 2)[0]
+	if !strings.Contains(first, "Test Scenario") || !strings.Contains(first, "beginner") {
+		t.Fatalf("header should be title · track, got %q", first)
 	}
 }
 
@@ -400,8 +407,11 @@ func TestLongScenarioTextUsesPages(t *testing.T) {
 	if strings.Contains(view, "HIDDEN-BOTTOM") {
 		t.Fatalf("bottom of debrief should wait for the next page:\n%s", view)
 	}
-	if !strings.Contains(view, "page 1/") {
-		t.Fatalf("page cue missing:\n%s", view)
+	if !strings.Contains(view, " · 1/") {
+		t.Fatalf("page cue missing from header:\n%s", view)
+	}
+	if strings.Contains(view, "page 1/") {
+		t.Fatalf("page cue should not occupy a scenario row:\n%s", view)
 	}
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})

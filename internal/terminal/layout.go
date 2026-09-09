@@ -4,7 +4,7 @@ const (
 	minSideBySideWidth = 100
 	defaultWidth       = 80
 	defaultHeight      = 24
-	headerLines        = 2
+	headerLines        = 1
 	defaultFooterLines = 1
 	hintFooterLines    = 3
 	stackedScenarioCap = 12

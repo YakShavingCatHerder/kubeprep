@@ -16,17 +16,14 @@ func TestClampStoryPage(t *testing.T) {
 	}
 }
 
-func TestPaginateScenarioReservesHintRow(t *testing.T) {
+func TestPaginateScenarioFillsViewport(t *testing.T) {
 	text := strings.Repeat("line\n", 10)
 	pages := paginateScenario(text, 20, 4)
-	if len(pages) != 4 {
-		t.Fatalf("pages = %d, want 4", len(pages))
+	if len(pages) != 3 {
+		t.Fatalf("pages = %d, want 3", len(pages))
 	}
-	if len(pages[0]) != 3 {
-		t.Fatalf("first page lines = %d, want 3 so the page cue fits", len(pages[0]))
-	}
-	if len(pages[3]) != 1 {
-		t.Fatalf("last page lines = %d, want 1", len(pages[3]))
+	if len(pages[0]) != 4 {
+		t.Fatalf("first page lines = %d, want 4", len(pages[0]))
 	}
 }
 
@@ -64,6 +61,15 @@ func TestLongForcedPageStillAutoSplits(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(pages[0], "\n"), "short") {
 		t.Fatalf("first page = %q", pages[0])
+	}
+}
+
+func TestScenarioPageCueOmitsSinglePage(t *testing.T) {
+	if got := scenarioPageCue(0, 1); got != "" {
+		t.Fatalf("single page cue = %q", got)
+	}
+	if got := scenarioPageCue(1, 5); got != "2/5" {
+		t.Fatalf("cue = %q, want 2/5", got)
 	}
 }
 

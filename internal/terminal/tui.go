@@ -389,12 +389,10 @@ func (m scenarioViewModel) View() string {
 	}
 	layout := computeSplitLayout(width, height, m.zoomed, m.footerHeight())
 
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
 	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
-	header := title.Render("KubePrep · Kubernetes Scenario Runner") + "\n" +
-		muted.Render(fmt.Sprintf("SCENARIO %s · MODULE %s · TRACK %s", m.scenario.ScenarioID, m.scenario.Module, m.scenario.Experience))
+	header := muted.Render(fitCells(m.headerText(), layout.Header.Width))
 	header = lipgloss.NewStyle().Width(layout.Header.Width).MaxHeight(layout.Header.Height).Render(header)
 
 	keys := "[?] hint  [F2] check  [F11] zoom  [Alt+←→] page  [F10] quit"
@@ -423,6 +421,30 @@ func (m scenarioViewModel) View() string {
 		return lipgloss.JoinVertical(lipgloss.Left, header, lipgloss.JoinHorizontal(lipgloss.Top, scenario, shell), footer)
 	}
 	return lipgloss.JoinVertical(lipgloss.Left, header, scenario, shell, footer)
+}
+
+func (m scenarioViewModel) headerText() string {
+	title := strings.TrimSpace(m.scenario.Title)
+	if title == "" {
+		title = strings.TrimSpace(m.scenario.ScenarioID)
+	}
+	var parts []string
+	if title != "" {
+		parts = append(parts, title)
+	}
+	if track := strings.TrimSpace(m.scenario.Experience); track != "" {
+		parts = append(parts, track)
+	}
+	if !m.zoomed {
+		pages := m.scenarioPages()
+		if cue := scenarioPageCue(m.clampedStoryPage(), len(pages)); cue != "" {
+			parts = append(parts, cue)
+		}
+	}
+	if len(parts) == 0 {
+		return "KubePrep"
+	}
+	return strings.Join(parts, " · ")
 }
 
 func (m scenarioViewModel) scenarioBody() string {
@@ -498,15 +520,11 @@ func (m scenarioViewModel) clampedStoryPage() int {
 }
 
 func (m scenarioViewModel) scenarioPane(size pane) string {
-	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 	inner, captionHeight, story := scenarioPaneRegions(size)
 
 	pages := paginateScenario(m.scenarioBody(), story.Width, story.Height)
 	page := clampStoryPage(m.storyPage, len(pages))
 	body := strings.Join(pages[page], "\n")
-	if hint := scenarioPageHint(page, len(pages)); hint != "" {
-		body += "\n" + muted.Render(hint)
-	}
 	body = lipgloss.NewStyle().Width(story.Width).Height(story.Height).MaxWidth(story.Width).MaxHeight(story.Height).Render(body)
 	bodyHeight := inner.Height - captionHeight
 	if bodyHeight < 1 {
