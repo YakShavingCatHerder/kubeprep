@@ -15,6 +15,8 @@ var (
 	// Inline tokens: the same cyan as section labels, so READY/STATUS stay in the
 	// sentence instead of looking like a second command.
 	scenarioInlineStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
+	// Body copy sits one step down so commands and keywords carry the hierarchy.
+	scenarioProseStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 )
 
 // styleScenarioMarkup highlights fenced blocks and inline `code` spans.
@@ -34,6 +36,8 @@ func styleScenarioMarkup(text string) string {
 		}
 		if inFence {
 			b.WriteString(scenarioCodeGutter.Render("│ ") + scenarioCodeStyle.Render(line))
+		} else if strings.Contains(line, "\x1b") {
+			b.WriteString(line)
 		} else {
 			b.WriteString(styleInlineCode(line))
 		}
@@ -54,16 +58,16 @@ func styleInlineCode(line string) string {
 	for {
 		start := strings.Index(rest, "`")
 		if start < 0 {
-			b.WriteString(rest)
+			b.WriteString(styleProse(rest))
 			return b.String()
 		}
 		closeOffset := strings.Index(rest[start+1:], "`")
 		if closeOffset < 0 {
-			b.WriteString(rest)
+			b.WriteString(styleProse(rest))
 			return b.String()
 		}
 		end := start + 1 + closeOffset
-		b.WriteString(rest[:start])
+		b.WriteString(styleProse(rest[:start]))
 		code := rest[start+1 : end]
 		if code == "" {
 			b.WriteString("``")
@@ -72,4 +76,11 @@ func styleInlineCode(line string) string {
 		}
 		rest = rest[end+1:]
 	}
+}
+
+func styleProse(s string) string {
+	if s == "" {
+		return s
+	}
+	return scenarioProseStyle.Render(s)
 }

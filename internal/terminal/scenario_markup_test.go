@@ -83,9 +83,23 @@ func TestStyleScenarioMarkupDistinguishesCommandsFromKeywords(t *testing.T) {
 }
 
 func TestStyleScenarioMarkupLeavesUnmatchedBacktick(t *testing.T) {
-	const raw = "Leave this `alone"
-	if got := styleScenarioMarkup(raw); got != raw {
-		t.Fatalf("got %q, want unchanged", got)
+	got := styleScenarioMarkup("Leave this `alone")
+	if !strings.Contains(got, "`alone") {
+		t.Fatalf("unmatched backtick should stay visible:\n%s", got)
+	}
+}
+
+func TestStyleScenarioMarkupDimsProseAndKeepsLabels(t *testing.T) {
+	if styleScenarioMarkup("Inspect the cluster.") == "Inspect the cluster." {
+		t.Fatal("prose should be dimmed")
+	}
+	if styleScenarioMarkup("Inspect the cluster.") == scenarioInlineStyle.Render("Inspect the cluster.") {
+		t.Fatal("prose should not use the keyword style")
+	}
+	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("OBJECTIVE")
+	got := styleScenarioMarkup(label + "\nInspect the cluster.")
+	if !strings.Contains(got, label) {
+		t.Fatalf("section labels should stay bright:\n%s", got)
 	}
 }
 
