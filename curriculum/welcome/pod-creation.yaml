@@ -74,50 +74,64 @@ setup:
 reset:
   manifests: []
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page. Keep it indented inside the | block.
+# Wrap copy-paste commands in ```kubectl fences (the pane adds a $; do not type it here).
+# Unlabeled / text / yaml fences indent as diagrams. Inline `code` highlights a token.
 description: |
-  You have inspected the cluster and seen components such as the API server,
-  etcd, scheduler, and kubelet. Now you are going to give Kubernetes
-  something to do.
+  You have inspected the cluster and seen components such as the API
+  server, etcd, scheduler, and kubelet.
 
-  A Pod is a Kubernetes API object that describes one or more containers that
-  should run together.
+  Now you are going to give Kubernetes something to do.
 
-  When you create a Pod with kubectl, kubectl does not directly start the
-  container. kubectl is a client for the Kubernetes API. It sends your request
-  to the API server.
+  A Pod is a Kubernetes API object that describes one or more containers
+  that should run together.
+
+  When you create a Pod, `kubectl` does not start the container itself.
+  `kubectl` is a client for the Kubernetes API. It sends your request to
+  the API server.
+
+  ::page::
 
   From there, several Kubernetes components participate:
 
-    kubectl
-      -> API server
-      -> scheduler
-      -> kubelet
-      -> container runtime
+  ```text
+  kubectl
+    -> API server
+    -> scheduler
+    -> kubelet
+    -> container runtime
+  ```
 
-  The API server validates the Pod object and persists the cluster's state.
-  The scheduler later decides which Node should run the Pod. kubelet on that
-  Node sees the assignment and works with the container runtime to create and
-  start the requested container.
+  The API server validates the Pod object and persists cluster state.
+
+  The scheduler later decides which Node should run the Pod.
+
+  kubelet on that Node sees the assignment and works with the container
+  runtime to create and start the requested container.
 
   Kubernetes then reports what actually happened back through the API.
 
+  ::page::
+
   This creates a distinction that will appear throughout Kubernetes:
 
-    spec   = what you asked Kubernetes to make true
-    status = what Kubernetes currently observes
+  ```text
+  spec   = what you asked Kubernetes to make true
+  status = what Kubernetes currently observes
+  ```
 
-  For now, focus only on creating the Pod object. Your lab workspace is already
-  selected for you, so you do not need to choose a namespace.
+  For now, focus only on creating the Pod object. Your lab workspace is
+  already selected, so you do not need to choose a namespace.
 
-  You may use an imperative kubectl command or submit an equivalent YAML
-  manifest. The grader evaluates the resulting Kubernetes object, not the
-  command used to create it.
+  You may use an imperative `kubectl` command or submit equivalent YAML.
+  The grader evaluates the resulting Kubernetes object, not the command
+  used to create it.
 # Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
 objective: |
-  Create a Pod named nginx using the nginx:1.27 container image.
+  Create a Pod named `nginx` using the `nginx:1.27` container image.
 
-  The resulting Kubernetes object must be a Pod named nginx whose requested
-  container image is nginx:1.27.
+  The object must be a Pod named `nginx` whose requested container image
+  is `nginx:1.27`.
 # kebab-case tags (not used for scoring today).
 concepts:
   - pod
@@ -151,79 +165,92 @@ checks:
 # Exactly three, in order: concept → what to inspect → one concrete command or next step.
 hints:
   - "You are not starting a container directly. Your first job is to submit a Pod API object that describes the container you want Kubernetes to run."
-  - "Check whether a Pod named nginx exists and look at the image recorded in its spec. The workspace has already been selected for you."
-  - "One valid path is: kubectl run nginx --image=nginx:1.27"
+  - "Check whether a Pod named `nginx` exists and look at the image recorded in its `spec`. The workspace has already been selected for you."
+  - |
+    One valid path is:
+
+    ```kubectl
+    kubectl run nginx --image=nginx:1.27
+    ```
 # Short confirmation of the proven state. No cheerleading.
 completion: |
-  Pod nginx exists with nginx:1.27 recorded as its requested container image.
-  The desired Pod object is now part of the cluster's state.
+  Pod `nginx` exists with `nginx:1.27` recorded as its requested container
+  image. The desired Pod object is now part of cluster state.
 debrief:
   # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
   explanation: |
-    The important part of this exercise was not the kubectl run syntax. It was
-    what happened because of that command.
+    The important part of this exercise was not one `kubectl` syntax. It
+    was what happened because you submitted the object.
 
-    kubectl constructed a Pod object and submitted it to the Kubernetes API
-    server. kubectl did not directly start nginx, choose a Node, or communicate
-    with the container runtime.
+    `kubectl` constructed a Pod and sent it to the API server. It did not
+    start `nginx`, choose a Node, or talk to the container runtime.
 
-    The API server is the front door for Kubernetes state. It validated the
-    request and persisted the desired cluster state. etcd is the backing store
-    used by the control plane for that state.
+    The API server is the front door for Kubernetes state. It validated
+    the request and persisted desired cluster state. etcd is the backing
+    store used by the control plane for that state.
 
     At this point, Kubernetes had a Pod object describing what you wanted:
 
-      kind: Pod
-      name: nginx
-      image: nginx:1.27
+    ```yaml
+    kind: Pod
+    name: nginx
+    image: nginx:1.27
+    ```
 
     That is desired state.
+
     ::page::
 
-    Creating the object did not itself decide where the Pod would run. A new
-    Pod that needs placement is observed by kube-scheduler. The scheduler
-    evaluates eligible Nodes, chooses one, and records that assignment through
-    the Kubernetes API.
+    Creating the object did not itself decide where the Pod would run. A
+    new Pod that needs placement is observed by kube-scheduler. The
+    scheduler evaluates eligible Nodes, chooses one, and records that
+    assignment through the API.
 
-    kubelet runs on each Node. The kubelet on the selected Node observes that
-    nginx has been assigned there and works with the container runtime to pull
-    the image if necessary and start the container.
+    kubelet runs on each Node. The kubelet on the selected Node observes
+    that `nginx` has been assigned there and works with the container
+    runtime to pull the image if necessary and start the container.
 
-    kubelet then reports information about the Pod and its containers back
-    through the API server.
+    kubelet then reports information about the Pod and its containers
+    back through the API server.
 
     That reported information becomes part of the Pod's observed state.
 
     This is the relationship to remember:
 
-      spec
-        What you asked Kubernetes to make true.
+    ```text
+    spec
+      What you asked Kubernetes to make true.
+    status
+      What Kubernetes currently observes while trying to make it true.
+    ```
 
-      status
-        What Kubernetes currently observes while trying to make it true.
     ::page::
 
-    A Pod becoming Running or Ready is therefore not something kubectl simply
-    writes into the object. Those values reflect what Kubernetes observes
-    after other components have acted on the desired state.
+    A Pod becoming `Running` or `Ready` is therefore not something
+    `kubectl` simply writes into the object. Those values reflect what
+    Kubernetes observes after other components have acted on the desired
+    state.
 
     The lifecycle is roughly:
 
-      kubectl submits the Pod
-        -> API server validates and persists it
-        -> scheduler selects a Node
-        -> kubelet observes the assignment
-        -> container runtime starts the container
-        -> kubelet reports observed state
+    ```text
+    kubectl submits the Pod
+      -> API server validates and persists it
+      -> scheduler selects a Node
+      -> kubelet observes the assignment
+      -> container runtime starts the container
+      -> kubelet reports observed state
+    ```
 
     This Pod is also a bare Pod. No Deployment, ReplicaSet, Job, or other
-    workload controller owns it. If you delete it, there is no higher-level
-    controller whose desired state tells Kubernetes to create a replacement.
+    workload controller owns it. If you delete it, there is no
+    higher-level controller whose desired state tells Kubernetes to
+    create a replacement.
 
-    The next Pod lab can now inspect the result using kubectl get,
-    kubectl get -o wide, kubectl describe, logs, exec, and the full Pod YAML
-    so you can see where the desired and observed parts of this lifecycle
-    appear.
+    The next lab can inspect the result with `get`, `-o wide`,
+    `describe`, logs, and the full Pod YAML so you can see where the
+    desired and observed parts of this lifecycle appear.
   # Commands worth remembering after success.
   commands:
     - kubectl run nginx --image=nginx:1.27

@@ -83,145 +83,172 @@ setup:
 reset:
   manifests: []
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page. Keep it indented inside the | block.
+# Wrap copy-paste commands in ```kubectl fences (the pane adds a $; do not type it here).
+# Unlabeled / text / yaml fences indent as diagrams. Inline `code` highlights a token.
 description: |
   This is your first Kubernetes lab.
 
-  You are not going to create, fix, or delete anything yet. Your job is simply
-  to look around.
+  You are not going to create, fix, or delete anything yet.
 
-  Kubernetes is a system for managing applications and the infrastructure they
-  run on. A Kubernetes environment is called a cluster.
+  Your job is to look around.
 
-  You interact with that cluster using a command-line program called kubectl.
+  Kubernetes is a system for managing applications and the infrastructure
+  they run on. A Kubernetes environment is called a cluster.
 
-  kubectl is pronounced "cube control," "cube cuddle," or sometimes simply
+  You interact with that cluster using a command-line program called
+  `kubectl`.
+
+  `kubectl` is pronounced "cube control," "cube cuddle," or sometimes
   "cube C-T-L." You will hear all three. They refer to the same tool.
 
-  The important part is what kubectl does:
+  The important part is what `kubectl` does:
 
-    you -> kubectl -> Kubernetes API -> Kubernetes cluster
+  ```text
+  you
+    -> kubectl
+    -> Kubernetes API
+    -> Kubernetes cluster
+  ```
 
-  kubectl is a client. It sends requests to Kubernetes and prints the response.
+  `kubectl` is a client. It sends requests to Kubernetes and prints the
+  response.
 
   ::page::
 
+  Many `kubectl` commands follow the same basic shape:
 
-  Many kubectl commands follow the same basic shape:
-
-    kubectl <verb> <resource>
+  ```text
+  kubectl <verb> <resource>
+  ```
 
   For example:
 
-    kubectl get nodes
+  ```kubectl
+  kubectl get nodes
+  ```
 
   Read that command almost like English:
 
-    kubectl
-      Use the Kubernetes command-line client.
+  ```text
+  kubectl
+    Use the Kubernetes command-line client.
+  get
+    Ask Kubernetes to show something.
+  nodes
+    The type of thing you want to see.
+  ```
 
-    get
-      Ask Kubernetes to show something.
-
-    nodes
-      The type of thing you want to see.
-
-  Try it:
-
-    kubectl get nodes
+  Try it.
 
   A Node is a machine that participates in the Kubernetes cluster.
+
   ::page::
 
+  You can use the same pattern with other resource types.
 
-  You can use the same pattern with other resource types:
+  ```kubectl
+  kubectl get pods
+  ```
 
-    kubectl get pods
-    kubectl get namespaces
+  A Pod is the basic Kubernetes object used to run containers. You do
+  not need to understand Pods yet. You will create one in the next lab.
 
-  A Pod is the basic Kubernetes object used to run containers. You do not need
-  to understand Pods yet. You will create one in the next lab.
+  ```kubectl
+  kubectl get namespaces
+  ```
 
   A namespace is a way Kubernetes groups many resources. Your training
-  workspace has already selected a namespace for you, so you do not need to
-  manage namespaces yet.
+  workspace has already selected a namespace for you, so you do not need
+  to manage namespaces yet.
 
-  Try:
+  You should find a Pod named `welcome`.
 
-    kubectl get pods
+  ::page::
 
-  You should find a Pod named welcome.
+  Most `kubectl` commands can become more specific by adding an object's
+  name:
 
-  Most kubectl commands can become more specific by adding an object's name:
-
-    kubectl get pod welcome
+  ```kubectl
+  kubectl get pod welcome
+  ```
 
   You can also ask for more information about one object:
 
-    kubectl describe pod welcome
+  ```kubectl
+  kubectl describe pod welcome
+  ```
+
+  Do not worry about understanding every field in the output.
+
+  Notice that Kubernetes knows much more about the object than the short
+  `get` output displays.
+
   ::page::
-
-
-  Don't worry about understanding every field in the output. For now, simply
-  notice that Kubernetes knows much more about the object than the short
-  kubectl get output displays.
 
   You can ask Kubernetes for a wider view:
 
-    kubectl get pod welcome -o wide
+  ```kubectl
+  kubectl get pod welcome -o wide
+  ```
 
-  Compare that output with:
+  Compare that output with the earlier `get`.
 
-    kubectl get pod welcome
-
-  The -o flag changes how kubectl displays the response.
+  The `-o` flag changes how `kubectl` displays the response.
 
   You can also look beyond your current workspace:
 
-    kubectl get pods -A
+  ```kubectl
+  kubectl get pods -A
+  ```
 
-  -A means all namespaces.
+  `-A` means all namespaces.
 
   You will probably see several Pods you did not create. Many belong to
   Kubernetes itself.
+
   ::page::
-  
 
-  Two other commands are useful when you do not know what is available:
+  Two other commands are useful when you do not know what is available.
 
-    kubectl api-resources
-    kubectl explain pod
+  ```kubectl
+  kubectl api-resources
+  ```
 
-  kubectl api-resources asks the API server which resource types it supports.
+  `api-resources` asks the API server which resource types it supports.
 
-  kubectl explain asks Kubernetes for information about the structure of a
+  ```kubectl
+  kubectl explain pod
+  ```
+
+  `explain` asks Kubernetes for information about the structure of a
   resource type.
 
-  You do not need to memorize the output of either command. Their value is
-  knowing that Kubernetes can tell you what resources and fields are
+  You do not need to memorize the output of either command. Their value
+  is knowing that Kubernetes can tell you what resources and fields are
   available.
-  ::page::
 
+  ::page::
 
   Finally, try:
 
-    kubectl cluster-info
+  ```kubectl
+  kubectl cluster-info
+  ```
 
-  This shows basic information about the Kubernetes cluster your kubectl
-  client is connected to.
+  This shows basic information about the cluster your `kubectl` client
+  is connected to.
 
-  Spend a few minutes experimenting with these read-only commands. Nothing in
-  this lab requires you to modify the cluster.
+  Spend a few minutes with these read-only commands. Nothing in this lab
+  requires you to modify the cluster.
 # Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
 objective: |
-  Explore the Kubernetes cluster.
+  Explore the cluster with read-only `kubectl`.
 
-  Use kubectl to inspect Nodes, Pods, namespaces, and the supplied Pod named
-  welcome. Experiment with get, describe, -o wide, api-resources, explain,
-  and cluster-info.
+  Leave the Pod named `welcome` unchanged.
 
-  When you are ready to move on, press F2 to run a check on the cluster's current state. 
-  
-  This lab has no specific objective or cluster state to reach so running F2 will always pass and move you onto the next lab.
+  Press F2 when you are ready to continue. This lab does not grade a
+  target state. F2 records completion and moves you on.
 
 # kebab-case tags (not used for scoring today).
 concepts:
@@ -247,109 +274,152 @@ ungraded: true
 checks: []
 # Exactly three, in order: concept → what to inspect → one concrete command or next step.
 hints:
-  - "Most kubectl commands can be read as kubectl <verb> <resource>. Start by asking Kubernetes to show you resources rather than trying to change anything."
-  - "Look at Nodes, namespaces, and Pods. Then inspect the supplied welcome Pod first with get and then with describe to compare the amount of information each command returns."
-  - "Start with: kubectl get nodes"
+  - "Most kubectl commands can be read as a verb plus a resource. Start by asking Kubernetes to show you resources rather than trying to change anything."
+  - "Look at Nodes, namespaces, and Pods. Then inspect the supplied `welcome` Pod first with get and then with describe to compare how much information each view returns."
+  - |
+    Start with:
+
+    ```kubectl
+    kubectl get nodes
+    ```
 # Short confirmation of the proven state. No cheerleading.
 completion: |
-  The supplied welcome Pod remains unchanged. You have a basic set of
-  read-only kubectl commands for exploring an unfamiliar Kubernetes cluster.
+  The Pod named `welcome` is unchanged. You have a basic set of read-only
+  `kubectl` commands for exploring an unfamiliar cluster.
 debrief:
   # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
   explanation: |
-    kubectl is your primary command-line interface to Kubernetes.
+    `kubectl` is your primary command-line interface to Kubernetes.
 
     The most useful beginner mental model is:
 
-      kubectl
-        -> sends a request to the Kubernetes API
-        -> receives a response
-        -> displays that response to you
+    ```text
+    kubectl
+      -> sends a request to the Kubernetes API
+      -> receives a response
+      -> displays that response to you
+    ```
 
-    kubectl is not the cluster itself, and commands such as kubectl get pods do
-    not log directly into the machines running those Pods.
+    `kubectl` is not the cluster itself. Commands such as `get pods` do
+    not log into the machines running those Pods.
 
-    The Kubernetes API server is the central interface used to read and change
-    Kubernetes state.
+    The Kubernetes API server is the central interface used to read and
+    change cluster state.
 
-    You used several different ways of asking that API for information.
+    You used several ways of asking that API for information.
 
-      kubectl get nodes
+    ```kubectl
+    kubectl get nodes
+    ```
 
-    get asks Kubernetes to list resources. Nodes represent machines that belong
-    to the cluster.
+    `get` asks Kubernetes to list resources. Nodes represent machines
+    that belong to the cluster.
 
-      kubectl get pods
+    ```kubectl
+    kubectl get pods
+    ```
 
-    This uses the same verb but asks for a different resource type.
+    Same verb, different resource type.
 
-      kubectl get pod welcome
+    ```kubectl
+    kubectl get pod welcome
+    ```
 
-    Adding a name narrows the request from a list of Pods to one particular
-    Pod.
+    Adding a name narrows the request from a list of Pods to one Pod.
 
-      kubectl describe pod welcome
-    ::page::
-
-    describe provides a more detailed, human-readable view of one object. It
-    often includes fields, status information, and related events that are not
-    visible in the normal get output.
-
-      kubectl get pod welcome -o wide
-
-    Flags modify a command. Here, -o controls output format and wide asks
-    kubectl to show additional columns.
-
-      kubectl get pods -A
-
-    -A means all namespaces. Without it, kubectl normally operates in the
-    namespace selected by your current context.
-
-      kubectl api-resources
-
-    This asks the API server which resource types are available. When you
-    forget the exact name or abbreviation of a Kubernetes resource, this is a
-    useful discovery command.
-
-      kubectl explain pod
-
-    explain gives you documentation for a Kubernetes resource and its fields.
-    Later, commands such as kubectl explain pod.spec.containers will help you
-    build and troubleshoot manifests without leaving the terminal.
-
-      kubectl cluster-info
-
-    This gives basic information about the cluster and the control-plane
-    endpoint your kubectl client is using.
+    ```kubectl
+    kubectl describe pod welcome
+    ```
 
     ::page::
 
-    You do not need to memorize every Kubernetes resource or every kubectl
+    `describe` is a more detailed, human-readable view of one object. It
+    often includes fields, status, and events that the short `get`
+    output hides.
+
+    ```kubectl
+    kubectl get pod welcome -o wide
+    ```
+
+    Flags modify a command. `-o` controls output format. `wide` asks
+    for additional columns.
+
+    ```kubectl
+    kubectl get pods -A
+    ```
+
+    `-A` means all namespaces. Without it, `kubectl` normally operates
+    in the namespace selected by your current context.
+
+    ```kubectl
+    kubectl api-resources
+    ```
+
+    This asks the API server which resource types are available. When
+    you forget a name or abbreviation, this is a useful discovery
     command.
 
-    A much more useful starting habit is learning how to ask Kubernetes
-    questions:
+    ```kubectl
+    kubectl explain pod
+    ```
 
-      What machines are here?
-        kubectl get nodes
+    `explain` documents a resource and its fields. Later,
+    `kubectl explain pod.spec.containers` will help you build and
+    troubleshoot manifests without leaving the terminal.
 
-      What Pods are here?
-        kubectl get pods
+    ```kubectl
+    kubectl cluster-info
+    ```
 
-      What is this specific object?
-        kubectl get <resource> <name>
+    This gives basic information about the cluster and the control-plane
+    endpoint your client is using.
 
-      Tell me more about it.
-        kubectl describe <resource> <name>
+    ::page::
 
-      What resource types exist?
-        kubectl api-resources
+    You do not need to memorize every resource or every command.
 
-      What does this resource or field mean?
-        kubectl explain <resource>
+    A more useful starting habit is learning how to ask Kubernetes
+    questions.
 
-    In the next lab, you will move from reading cluster state to changing it
-    for the first time by creating a Pod.
+    What machines are here?
+
+    ```kubectl
+    kubectl get nodes
+    ```
+
+    What Pods are here?
+
+    ```kubectl
+    kubectl get pods
+    ```
+
+    What is this specific object?
+
+    ```text
+    kubectl get <resource> <name>
+    ```
+
+    Tell me more about it.
+
+    ```text
+    kubectl describe <resource> <name>
+    ```
+
+    What resource types exist?
+
+    ```kubectl
+    kubectl api-resources
+    ```
+
+    What does this resource or field mean?
+
+    ```text
+    kubectl explain <resource>
+    ```
+
+    In the next lab, you will move from reading cluster state to
+    changing it for the first time by creating a Pod.
   # Commands worth remembering after success.
   commands:
     - kubectl get nodes
