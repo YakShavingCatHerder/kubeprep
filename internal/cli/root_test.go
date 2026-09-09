@@ -7,11 +7,13 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"testing/fstest"
 
 	"github.com/YakShavingCatHerder/kubeprep/internal/curriculum"
 	"github.com/YakShavingCatHerder/kubeprep/internal/game"
 	"github.com/YakShavingCatHerder/kubeprep/internal/validator"
 	"github.com/spf13/cobra"
+	"gopkg.in/yaml.v3"
 )
 
 func TestEvaluateUngradedScenarioPassesWithoutCluster(t *testing.T) {
@@ -117,46 +119,40 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	registry, err := curriculum.NewRegistry()
-	if err != nil {
-		t.Fatal(err)
+	registry := playlistRegistry(t, playlistPath{id: "beginner", labs: []string{"alpha", "beta", "gamma"}})
+	order := registry.PlayOrder("beginner")
+	if len(order) < 2 {
+		t.Fatalf("fixture play order = %v", order)
 	}
 	scenario, err := currentScenario(store, registry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "kubectl-basics" {
-		t.Fatalf("first scenario = %q", scenario.ID)
+	for i, id := range order {
+		if scenario.ID != id {
+			t.Fatalf("scenario %d = %q, want %q", i+1, scenario.ID, id)
+		}
+		if err := store.CompleteScenario(scenario.ID); err != nil {
+			t.Fatal(err)
+		}
+		scenario, err = currentScenario(store, registry)
+		if err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := store.CompleteScenario(scenario.ID); err != nil {
+	last := order[len(order)-1]
+	if scenario.ID != last {
+		t.Fatalf("completed catalog still resumes %q, want %q", scenario.ID, last)
+	}
+	if err := store.SelectScenario(order[0]); err != nil {
 		t.Fatal(err)
 	}
 	scenario, err = currentScenario(store, registry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" {
-		t.Fatalf("second scenario = %q", scenario.ID)
-	}
-	if err := store.CompleteScenario(scenario.ID); err != nil {
-		t.Fatal(err)
-	}
-	scenario, err = currentScenario(store, registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if scenario.ID != "pod-creation" {
-		t.Fatalf("completed catalog still resumes %q", scenario.ID)
-	}
-	if err := store.SelectScenario("pod-creation"); err != nil {
-		t.Fatal(err)
-	}
-	scenario, err = currentScenario(store, registry)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if scenario.ID != "pod-creation" {
-		t.Fatalf("selected scenario = %q", scenario.ID)
+	if scenario.ID != order[0] {
+		t.Fatalf("selected scenario = %q, want %q", scenario.ID, order[0])
 	}
 }
 
@@ -191,36 +187,57 @@ func TestFollowingIncompleteScenario(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	registry, err := curriculum.NewRegistry()
+	registry := playlistRegistry(t, playlistPath{id: "beginner", labs: []string{"alpha", "beta", "gamma"}})
+	order := registry.PlayOrder("beginner")
+	if len(order) < 2 {
+		t.Fatalf("fixture play order = %v", order)
+	}
+	next, err := followingIncompleteScenario(store, registry, "")
 	if err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range order {
+		if next == nil || next.ID != id {
+			t.Fatalf("following scenario = %v, want %s", next, id)
+		}
+		if err := store.CompleteScenario(id); err != nil {
+			t.Fatal(err)
+		}
+		next, err = followingIncompleteScenario(store, registry, "")
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	if next != nil {
+		t.Fatalf("expected no following incomplete scenario, got %s", next.ID)
+	}
+}
+
+func TestFollowingIncompleteScenarioSkipsCompletedLabs(t *testing.T) {
+	store, err := game.NewStore(game.WithConfigDir(t.TempDir()))
+	if err != nil {
+		t.Fatal(err)
+	}
+	registry := playlistRegistry(t, playlistPath{id: "beginner", labs: []string{"alpha", "beta", "gamma"}})
+	if err := store.CompleteScenario("beta"); err != nil {
 		t.Fatal(err)
 	}
 	next, err := followingIncompleteScenario(store, registry, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next == nil || next.ID != "kubectl-basics" {
-		t.Fatalf("following scenario = %v", next)
+	if next == nil || next.ID != "alpha" {
+		t.Fatalf("first incomplete = %v, want alpha", next)
 	}
-	if err := store.CompleteScenario("kubectl-basics"); err != nil {
+	if err := store.CompleteScenario("alpha"); err != nil {
 		t.Fatal(err)
 	}
 	next, err = followingIncompleteScenario(store, registry, "")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next == nil || next.ID != "pod-creation" {
-		t.Fatalf("following scenario after welcome = %v", next)
-	}
-	if err := store.CompleteScenario("pod-creation"); err != nil {
-		t.Fatal(err)
-	}
-	next, err = followingIncompleteScenario(store, registry, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if next != nil {
-		t.Fatalf("expected no following incomplete scenario, got %s", next.ID)
+	if next == nil || next.ID != "gamma" {
+		t.Fatalf("after skipping completed = %v, want gamma", next)
 	}
 }
 
@@ -235,16 +252,16 @@ func TestCurrentScenarioUsesCertificationTrackPlayOrder(t *testing.T) {
 	}); err != nil {
 		t.Fatal(err)
 	}
-	registry, err := curriculum.NewRegistry()
-	if err != nil {
-		t.Fatal(err)
-	}
+	registry := playlistRegistry(t,
+		playlistPath{id: "beginner", labs: []string{"alpha", "beta"}},
+		playlistPath{id: "cka", labs: []string{"beta"}},
+	)
 	scenario, err := currentScenario(store, registry)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "kubectl-basics" {
-		t.Fatalf("first CKA scenario = %q, want kubectl-basics", scenario.ID)
+	if scenario.ID != "beta" {
+		t.Fatalf("first CKA scenario = %q, want beta", scenario.ID)
 	}
 }
 
@@ -479,6 +496,79 @@ func TestPrepareTryDoesNotWriteCurriculum(t *testing.T) {
 	}
 	if _, err := os.Stat(filepath.Join(a.livePackDir, "workloads", "test-scenario.yaml")); err != nil {
 		t.Fatal(err)
+	}
+}
+
+type playlistPath struct {
+	id   string
+	labs []string
+}
+
+func playlistRegistry(t *testing.T, paths ...playlistPath) *curriculum.Registry {
+	t.Helper()
+	if len(paths) == 0 {
+		t.Fatal("playlistRegistry requires at least one path")
+	}
+	catalog := curriculum.Catalog{
+		APIVersion: curriculum.CatalogAPIVersionV1Alpha1,
+		Name:       "test-pack",
+		Title:      "Test Pack",
+		Revision:   "2026-09",
+	}
+	files := fstest.MapFS{}
+	seen := make(map[string]struct{})
+	for _, learningPath := range paths {
+		catalog.Paths = append(catalog.Paths, curriculum.Path{
+			ID:    learningPath.id,
+			Title: learningPath.id,
+			Sections: []curriculum.Section{{
+				ID:   "fixtures",
+				Labs: learningPath.labs,
+			}},
+		})
+		for _, id := range learningPath.labs {
+			if _, exists := seen[id]; exists {
+				continue
+			}
+			seen[id] = struct{}{}
+			data, err := yaml.Marshal(fixtureScenario(id))
+			if err != nil {
+				t.Fatal(err)
+			}
+			files[curriculum.LabFilePath("fixtures", id)] = &fstest.MapFile{Data: data}
+		}
+	}
+	catalogData, err := yaml.Marshal(catalog)
+	if err != nil {
+		t.Fatal(err)
+	}
+	files["catalog.yaml"] = &fstest.MapFile{Data: catalogData}
+	registry, err := curriculum.NewRegistryFromSources(curriculum.Source{Name: "local", FS: files})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return registry
+}
+
+func fixtureScenario(id string) *curriculum.Scenario {
+	return &curriculum.Scenario{
+		APIVersion:  curriculum.APIVersionV1Alpha1,
+		ID:          id,
+		Mode:        "challenge",
+		Title:       id,
+		Description: "Fixture lab.",
+		Revision:    "2026-09",
+		Module:      "fixtures",
+		Difficulty:  1,
+		Kubernetes:  curriculum.KubernetesCompatibility{Min: "1.35", Max: "1.35"},
+		Tracks:      []string{"beginner", "cka", "ckad"},
+		Objective:   "Finish the fixture.",
+		Concepts:    []string{"pods"},
+		Namespace:   "kubeprep-fixtures",
+		Ungraded:    true,
+		Hints:       []string{"conceptual", "procedural", "explicit"},
+		Completion:  "Done.",
+		Debrief:     curriculum.Debrief{Explanation: "Fixture."},
 	}
 }
 
