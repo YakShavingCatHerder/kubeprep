@@ -6,14 +6,9 @@ paths:
   - id: beginner
     title: Beginner
     sections:
-<<<<<<< Updated upstream
-      - id: pods
-        labs:
-=======
       - id: welcome
         labs:
           - kubectl-basics
->>>>>>> Stashed changes
           - pod-creation
   - id: cka
     title: CKA

@@ -657,9 +657,10 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Hints:               scenario.Hints,
 		Completion:          strings.TrimSpace(scenario.Completion),
 		Debrief:             strings.TrimSpace(scenario.Debrief.Explanation),
+		Ungraded:            scenario.Ungraded,
 		Kubeconfig:          manager.Paths().Kubeconfig,
 		ToolBinDir:          manager.Paths().BinDir(),
-		ObserveWhileRunning: observeDelay > 0,
+		ObserveWhileRunning: observeDelay > 0 && !scenario.Ungraded,
 		ObserveDelay:        observeDelay,
 		HasNext:             next != nil,
 		NextTitle:           nextTitle,
@@ -818,7 +819,7 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 			return fmt.Errorf("prepare %s: cluster profile does not provide capability %q", scenario.Title, capability)
 		}
 	}
-	if len(scenario.Checks) == 0 {
+	if !scenario.Ungraded && len(scenario.Checks) == 0 {
 		return fmt.Errorf("prepare %s: scenario has no checks", scenario.Title)
 	}
 	if wipe {
@@ -833,13 +834,8 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 	if len(strings.TrimSpace(string(manifest))) == 0 {
 		return nil
 	}
-	first := scenario.Checks[0]
-	kind := first.Kind
-	if kind == "" && first.Type == curriculum.CheckDeploymentAvailable {
-		kind = "deployment"
-	}
-	if !wipe && kind != "" && first.Namespace != "" && first.Name != "" {
-		result, err := (validator.ObjectExists{Kind: kind, Namespace: first.Namespace, Name: first.Name}).
+	if kind, namespace, name := setupObjectProbe(scenario); !wipe && kind != "" && namespace != "" && name != "" {
+		result, err := (validator.ObjectExists{Kind: kind, Namespace: namespace, Name: name}).
 			Evaluate(ctx, validator.KubectlRunner{Kubeconfig: manager.Paths().Kubeconfig, Executable: manager.Paths().KubectlExecutable()})
 		if err != nil {
 			return fmt.Errorf("inspect %s setup: %w", scenario.Title, err)
@@ -852,6 +848,18 @@ func prepareScenario(ctx context.Context, scenario *curriculum.Scenario, registr
 		return fmt.Errorf("prepare %s: %w", scenario.Title, err)
 	}
 	return nil
+}
+
+func setupObjectProbe(scenario *curriculum.Scenario) (kind, namespace, name string) {
+	if scenario == nil || len(scenario.Checks) == 0 {
+		return "", "", ""
+	}
+	first := scenario.Checks[0]
+	kind = first.Kind
+	if kind == "" && first.Type == curriculum.CheckDeploymentAvailable {
+		kind = "deployment"
+	}
+	return kind, first.Namespace, first.Name
 }
 
 func scenarioResources(registry *curriculum.Registry, scenario *curriculum.Scenario, resources curriculum.ResourceSet) ([]byte, error) {
@@ -884,6 +892,9 @@ func scenarioTarget(scenario *curriculum.Scenario) (string, string) {
 }
 
 func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, manager *cluster.Manager) (validator.Result, error) {
+	if scenario.Ungraded {
+		return validator.Result{Status: validator.Success, Message: "This lab does not grade cluster state."}, nil
+	}
 	checks := make([]validator.Check, 0, len(scenario.Checks))
 	for index, authored := range scenario.Checks {
 		var definition validator.Definition

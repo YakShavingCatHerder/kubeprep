@@ -35,6 +35,7 @@ type ScenarioView struct {
 	InitialHintLevel    int
 	Completion          string
 	Debrief             string
+	Ungraded            bool
 	Kubeconfig          string
 	ToolBinDir          string
 	ObserveWhileRunning bool
@@ -67,7 +68,9 @@ func RunScenarioView(ctx context.Context, scenario ScenarioView) (SessionResult,
 		hintLevel = 0
 	}
 	status := "Lab Shell is attached. Press F2 to validate cluster state."
-	if scenario.ObserveWhileRunning && scenario.ObserveDelay > 0 {
+	if scenario.Ungraded {
+		status = "Lab Shell is attached. Press F2 when you are ready to continue."
+	} else if scenario.ObserveWhileRunning && scenario.ObserveDelay > 0 {
 		status = waitingStatus(scenario.ObserveDelay)
 	}
 	model := scenarioViewModel{
@@ -395,6 +398,9 @@ func (m scenarioViewModel) View() string {
 	header = lipgloss.NewStyle().Width(layout.Header.Width).MaxHeight(layout.Header.Height).Render(header)
 
 	keys := "[?] hint  [F2] check  [F11] zoom  [Alt+←→] page  [F10] quit"
+	if m.scenario.Ungraded && !m.advancePrompt && !m.prefix {
+		keys = "[?] hint  [F2] continue  [F11] zoom  [Alt+←→] page  [F10] quit"
+	}
 	if m.advancePrompt && m.scenario.HasNext {
 		keys = "[y] next  [n] stay  [Alt+←→] page  [F10] quit"
 	} else if m.advancePrompt {
@@ -404,7 +410,7 @@ func (m scenarioViewModel) View() string {
 	}
 	footerText := muted.Render(keys)
 	if hint := m.currentHint(); hint != "" {
-		footerText = label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + hint + "\n" + muted.Render(keys)
+		footerText = label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + styleScenarioMarkup(hint) + "\n" + muted.Render(keys)
 	}
 	footer := lipgloss.NewStyle().Width(layout.Footer.Width).MaxHeight(layout.Footer.Height).Render(footerText)
 

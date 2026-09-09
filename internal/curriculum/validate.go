@@ -95,7 +95,11 @@ func Validate(scenario *Scenario) error {
 	if err := validateManifestRefs("setup.manifests", scenario.Setup.Manifests, requireManifests); err != nil {
 		return err
 	}
-	if len(scenario.Checks) == 0 {
+	if scenario.Ungraded {
+		if len(scenario.Checks) != 0 {
+			return fmt.Errorf("checks: must be empty when ungraded is true")
+		}
+	} else if len(scenario.Checks) == 0 {
 		return fmt.Errorf("checks: must contain at least one check")
 	}
 	for i, check := range scenario.Checks {

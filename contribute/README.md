@@ -26,8 +26,13 @@ or `debrief.explanation` starts a new page in the left-hand scenario pane.
 Learners never see the marker. A page that is still too long for the pane
 keeps auto-splitting.
 
-Set `authoring.section` and `module` to the same section id (`pods`, `rbac`,
-…). The published path is `{section}/{id}.yaml`. `tracks` lists which
+Wrap copy-paste commands in fenced blocks: a line of three backticks, the
+command, then a closing line of three backticks. Inline backticks highlight
+a token in a sentence (for example `READY`). Keep both indented inside the
+`|` block, same as `::page::`.
+
+Set `authoring.section` and `module` to the same section id (`welcome`, `pods`,
+`rbac`, …). The published path is `{section}/{id}.yaml`. `tracks` lists which
 playlists may include the lab. Play order is `catalog.yaml`, not the lab file.
 
 Start from a broken or incomplete cluster. Reset must restore that same start.
@@ -81,6 +86,9 @@ paths:
   - id: beginner
     title: Beginner
     sections:
+      - id: welcome
+        labs:
+          - kubectl-basics
       - id: pods
         labs:
           - pod-creation
@@ -93,6 +101,10 @@ one path; it is still one file. `lab publish` appends the id to each track in
 ## Checks
 
 Any `kubectl` path that produces the graded state passes.
+
+Orientation labs may set `ungraded: true` and `checks: []`. F2 then completes
+the lab without inspecting cluster state. Other labs still need at least one
+typed check.
 
 Types that run (unknown names fail lab validation):
 

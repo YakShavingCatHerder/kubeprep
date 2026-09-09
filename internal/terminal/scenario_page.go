@@ -15,7 +15,7 @@ func wrapScenarioLines(text string, width int) []string {
 	if width < 1 {
 		width = 1
 	}
-	rendered := lipgloss.NewStyle().Width(width).Render(text)
+	rendered := lipgloss.NewStyle().Width(width).Render(styleScenarioMarkup(text))
 	return strings.Split(rendered, "\n")
 }
 
