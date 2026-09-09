@@ -1,0 +1,444 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: welcome
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Inspect a running Pod from outside the container and learn which kubectl views answer questions about summary state, placement, events, desired state, observed state, and application output."
+    # The misconception the lab should break.
+    wrongIdea: "kubectl get pods tells you everything important about a Pod, or Running means the same thing as Ready and healthy."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "The Pod API object contains desired configuration in spec and Kubernetes' observations in status. kubectl get, describe, YAML output, and logs expose different views of the resource or its runtime behavior, so operators choose the view that matches the question they are asking."
+    # Why this lab sits here on the playlist.
+    why: "The learner has already created a Pod and learned the basic workload lifecycle. The next step is learning how to inspect that Pod before introducing commands that execute processes inside containers."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "This lab is intentionally read-only and ungraded because command execution cannot be proven through cluster-state checks. A healthy nginx Pod is supplied so the learner can focus on inspection. kubectl exec is explicitly out of scope and belongs in the next lab."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+      namespace: kubeprep-pod-inspection
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Inspect the supplied nginx Pod with read-only kubectl commands while leaving the Pod unchanged."
+    - "Use get, get -o wide, describe, get -o yaml, and logs in any order while preserving the supplied cluster state."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Delete, replace, edit, patch, or otherwise modify the supplied nginx Pod."
+    - "Use kubectl exec as part of this lab; in-container inspection is intentionally reserved for the next exercise."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Inspect the Pod in a different order, such as YAML before describe, while leaving cluster state unchanged."
+
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: pod-inspection
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Inspect a Running Pod
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module: welcome
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-pod-inspection
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: |
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+    namespace: kubeprep-pod-inspection
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.27
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+description: |
+  In the previous lab, you created a Pod named nginx and learned the basic
+  path Kubernetes follows to make it run:
+
+  ```text
+  kubectl
+    -> API server
+    -> scheduler
+    -> kubelet
+    -> container runtime
+  ```
+
+  This lab starts with a healthy nginx Pod already running.
+
+  Do not change it.
+
+  Your job is to learn how to inspect the workload from outside the container
+  and choose the right kubectl view for the question you are asking.
+
+  ::page::
+
+  Start with the shortest view:
+
+  ```kubectl
+  kubectl get pod nginx
+  ```
+
+  This gives you a quick summary of the Pod.
+
+  Pay attention to `READY`, `STATUS`, `RESTARTS`, and `AGE`.
+
+  `READY` and `STATUS` are related, but they do not mean the same thing.
+
+  `READY` tells you how many containers in the Pod are currently considered
+  ready.
+
+  `STATUS` gives you a high-level summary of the Pod's current situation.
+
+  A Pod can be Running while one of its containers is not Ready.
+
+  Now ask for a wider view:
+
+  ```kubectl
+  kubectl get pod nginx -o wide
+  ```
+
+  Compare the output with the normal get command.
+
+  Look for the `NODE` and `IP` columns.
+
+  The scheduler selected a Node for this Pod in an earlier part of its
+  lifecycle. The wide output lets you see the result of that placement
+  decision.
+
+  ::page::
+
+  Next, inspect the Pod in more detail:
+
+  ```kubectl
+  kubectl describe pod nginx
+  ```
+
+  describe gives you a human-readable view of important information about the
+  object.
+
+  Look for sections such as `Node`, `Containers`, `Conditions`, and `Events`.
+
+  Do not worry about understanding every field yet.
+
+  Focus on the Events section near the bottom.
+
+  Events often show notable actions that happened while Kubernetes was making
+  the workload run, such as:
+
+  ```text
+  scheduling the Pod
+  pulling the image
+  creating the container
+  starting the container
+  ```
+
+  describe is one of the first commands you should reach for when a workload
+  does not look the way you expect.
+
+  ::page::
+
+  Now ask Kubernetes for the complete Pod object:
+
+  ```kubectl
+  kubectl get pod nginx -o yaml
+  ```
+
+  This output is much larger.
+
+  For now, focus on three top-level sections: `metadata`, `spec`, and
+  `status`.
+
+  `metadata` contains identifying information about the object.
+
+  `spec` describes the desired state.
+
+  `status` describes what Kubernetes currently observes.
+
+  Find the requested image under spec:
+
+  ```text
+  spec:
+    containers:
+      - image: nginx:1.27
+  ```
+
+  Then inspect status and look for information about `phase`, `conditions`,
+  and `containerStatuses`.
+
+  This distinction is fundamental:
+
+  ```text
+  spec   = what you asked Kubernetes to make true
+  status = what Kubernetes currently observes
+  ```
+
+  Kubernetes works to make observed state match desired state.
+
+  ::page::
+
+  Finally, inspect the application's output:
+
+  ```kubectl
+  kubectl logs nginx
+  ```
+
+  logs is different from get, describe, and YAML output.
+
+  Those commands tell you about the Kubernetes object and Kubernetes'
+  observations.
+
+  logs shows output produced by the application running inside the container.
+
+  An application can be running while still behaving incorrectly, so logs are
+  often an important next step after inspecting Kubernetes state.
+
+  For this lab, stop here.
+
+  Do not use kubectl exec yet.
+
+  The next lab will introduce exec separately because entering or running
+  commands inside a container is a different troubleshooting perspective from
+  inspecting the workload externally.
+
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  Inspect the supplied nginx Pod without changing it.
+
+  Use kubectl to examine its summary state, wider placement information,
+  detailed description and Events, full YAML representation, and application
+  logs.
+
+  Be able to identify the difference between desired state in spec and
+  observed state in status.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - pod
+  - kubectl-get
+  - kubectl-describe
+  - kubectl-logs
+  - yaml
+  - events
+  - desired-state
+  - observed-state
+  - pod-status
+  - pod-placement
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
+ungraded: true
+checks: []
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - "Different kubectl views answer different questions: get summarizes, describe adds human-readable detail and Events, YAML exposes the full API object, and logs shows application output."
+  - "Compare the normal get output with -o wide, then inspect describe and the full YAML. Pay particular attention to Node placement, Events, spec, and status."
+  - "Start with: `kubectl get pod nginx`"
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  You have inspected the nginx Pod through summary, placement, detailed,
+  API-object, and application-log views without changing the workload.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
+  explanation: |
+    No single kubectl command tells you everything about a workload.
+
+    The important skill is learning which view answers which question.
+
+    ```kubectl
+    kubectl get pod nginx
+    ```
+
+    gives you a quick operational summary.
+
+    The `READY` column is normally shown as two numbers, such as `1/1`.
+
+    The first number is how many containers are currently Ready.
+
+    The second number is the total number of containers expected in the Pod.
+
+    `STATUS` is a broader summary of the Pod's current state.
+
+    Running and Ready are not interchangeable.
+
+    ::page::
+
+    ```kubectl
+    kubectl get pod nginx -o wide
+    ```
+
+    adds more context.
+
+    In particular, the `NODE` column tells you where the Pod was placed.
+
+    This connects directly to the lifecycle from the previous lab:
+
+    ```text
+    API server accepts the Pod
+      -> scheduler selects a Node
+      -> kubelet on that Node runs the workload
+    ```
+
+    The wide view lets you observe the result of the scheduler's placement
+    decision without needing to inspect the scheduler itself.
+
+    ::page::
+
+    ```kubectl
+    kubectl describe pod nginx
+    ```
+
+    gives you a human-readable summary of details that are useful during
+    investigation.
+
+    One of its most important sections is Events.
+
+    Events can reveal what Kubernetes did around the resource, including
+    scheduling, image pulling, container creation, and startup.
+
+    This makes describe a common early troubleshooting command.
+
+    It answers questions such as:
+
+    ```text
+    Was the Pod scheduled?
+    Was the image pulled?
+    Did the container start?
+    Has Kubernetes reported a warning?
+    ```
+
+    ::page::
+
+    ```kubectl
+    kubectl get pod nginx -o yaml
+    ```
+
+    exposes the complete API object.
+
+    Two sections matter especially early in your Kubernetes learning:
+
+    ```text
+    spec     Desired state.
+    status   Observed state.
+    ```
+
+    nginx:1.27 appears in spec because that is the image Kubernetes was asked
+    to run.
+
+    Information such as phase, readiness conditions, and container state
+    appears in status because Kubernetes discovered those facts while acting
+    on the desired state.
+
+    This gives you one of the most important Kubernetes mental models:
+
+    ```text
+    desired state
+      -> Kubernetes components act
+      -> observed state
+    ```
+
+    When troubleshooting later, much of your work will involve finding the
+    difference between those two states.
+
+    ::page::
+
+    ```kubectl
+    kubectl logs nginx
+    ```
+
+    answers a different kind of question.
+
+    get, describe, and YAML tell you what Kubernetes knows about the workload.
+
+    logs tells you what the application itself wrote to standard output and
+    standard error.
+
+    That distinction matters because Kubernetes can successfully start a
+    container even when the application inside it is behaving incorrectly.
+
+    A useful beginner inspection flow is:
+
+    ```text
+    kubectl get
+      -> What exists and what is its high-level state?
+
+    kubectl get -o wide
+      -> Where is it running?
+
+    kubectl describe
+      -> What details and Events does Kubernetes report?
+
+    kubectl get -o yaml
+      -> What does the complete API object say?
+
+    kubectl logs
+      -> What is the application saying?
+    ```
+
+    The next lab adds another perspective:
+
+    ```text
+    kubectl exec
+      -> What can I observe by running a command inside the container?
+    ```
+
+    Keeping exec separate matters because inspecting a Kubernetes object from
+    outside the container and executing a process inside the container are two
+    different operational actions.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl get pod nginx
+    - kubectl get pod nginx -o wide
+    - kubectl describe pod nginx
+    - kubectl get pod nginx -o yaml
+    - kubectl logs nginx
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - get and wide output
+    - describe and Events
+    - Pod spec and status
+    - Running versus Ready
+    - Desired state versus observed state
+    - Container logs
+  # One-line domain label.
+  domain: Pod inspection and observed state
