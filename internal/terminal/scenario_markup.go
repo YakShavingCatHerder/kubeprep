@@ -19,9 +19,10 @@ var (
 	scenarioCodeStyle   = lipgloss.NewStyle().Foreground(lipgloss.Color("114"))
 	// Diagrams and YAML samples: indented reading matter, no prompt.
 	scenarioDiagramStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("250"))
-	// Inline tokens: the same cyan as section labels, so READY/STATUS stay in the
-	// sentence instead of looking like a second command.
+	// Inline tokens: bold cyan, so READY/STATUS stay in the sentence.
 	scenarioInlineStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
+	// Body section labels: same brightness as prose, bold, not keyword cyan.
+	scenarioSectionStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("252"))
 	// Body copy sits one step down so commands and keywords carry the hierarchy.
 	scenarioProseStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("252"))
 )

@@ -389,7 +389,6 @@ func (m scenarioViewModel) View() string {
 	}
 	layout := computeSplitLayout(width, height, m.zoomed, m.footerHeight())
 
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
 	header := muted.Render(fitCells(m.headerText(), layout.Header.Width))
@@ -408,7 +407,7 @@ func (m scenarioViewModel) View() string {
 	}
 	footerText := muted.Render(keys)
 	if hint := m.currentHint(); hint != "" {
-		footerText = label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + styleScenarioMarkup(hint) + "\n" + muted.Render(keys)
+		footerText = scenarioSectionStyle.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + styleScenarioMarkup(hint) + "\n" + muted.Render(keys)
 	}
 	footer := lipgloss.NewStyle().Width(layout.Footer.Width).MaxHeight(layout.Footer.Height).Render(footerText)
 
@@ -448,17 +447,16 @@ func (m scenarioViewModel) headerText() string {
 }
 
 func (m scenarioViewModel) scenarioBody() string {
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
 	var body strings.Builder
 	if m.state == CheckSuccess {
-		body.WriteString(label.Render("SCENARIO COMPLETED") + "\n\n")
+		body.WriteString(scenarioSectionStyle.Render("SCENARIO COMPLETED") + "\n\n")
 		if text := strings.TrimSpace(m.scenario.Completion); text != "" {
 			body.WriteString(text + "\n\n")
 		}
 		if text := strings.TrimSpace(m.scenario.Debrief); text != "" {
-			body.WriteString(label.Render("EXPLANATION") + "\n")
+			body.WriteString(scenarioSectionStyle.Render("EXPLANATION") + "\n")
 			body.WriteString(text + "\n")
 		}
 		if m.advancePrompt && m.scenario.HasNext {
@@ -466,19 +464,19 @@ func (m scenarioViewModel) scenarioBody() string {
 			if title == "" {
 				title = "the next scenario"
 			}
-			body.WriteString("\n" + label.Render("CONTINUE") + "\n")
+			body.WriteString("\n" + scenarioSectionStyle.Render("CONTINUE") + "\n")
 			body.WriteString("Continue to " + title + "?\nPress y to continue, or F10 when you are done training.\n")
 		} else if m.advancePrompt {
-			body.WriteString("\n" + label.Render("TRAINING COMPLETE") + "\n")
+			body.WriteString("\n" + scenarioSectionStyle.Render("TRAINING COMPLETE") + "\n")
 			body.WriteString("No further scenarios remain on this track. Press F10 to leave.\n")
 		}
 	} else {
 		if desc := strings.Join(m.storyBeats, "\n\n"); desc != "" {
 			body.WriteString(desc + "\n\n")
 		}
-		body.WriteString(label.Render("OBJECTIVE") + "\n")
+		body.WriteString(scenarioSectionStyle.Render("OBJECTIVE") + "\n")
 		body.WriteString(m.scenario.Objective + "\n\n")
-		body.WriteString(label.Render("VALIDATION") + "\n")
+		body.WriteString(scenarioSectionStyle.Render("VALIDATION") + "\n")
 		if m.scenario.Resource != "" {
 			body.WriteString(m.scenario.Resource + "\n")
 		}
@@ -493,7 +491,7 @@ func (m scenarioViewModel) scenarioBody() string {
 			body.WriteString("\n" + muted.Render("Checking cluster state…"))
 		}
 		if m.hintLevel > 0 && m.hintLevel <= len(m.scenario.Hints) {
-			body.WriteString("\n\n" + label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "\n")
+			body.WriteString("\n\n" + scenarioSectionStyle.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "\n")
 			body.WriteString(m.scenario.Hints[m.hintLevel-1])
 		}
 	}

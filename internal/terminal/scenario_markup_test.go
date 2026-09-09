@@ -100,10 +100,10 @@ func TestStyleScenarioMarkupDimsProseAndKeepsLabels(t *testing.T) {
 	if styleScenarioMarkup("Inspect the cluster.") == scenarioInlineStyle.Render("Inspect the cluster.") {
 		t.Fatal("prose should not use the keyword style")
 	}
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("OBJECTIVE")
+	label := scenarioSectionStyle.Render("OBJECTIVE")
 	got := styleScenarioMarkup(label + "\nInspect the cluster.")
 	if !strings.Contains(got, label) {
-		t.Fatalf("section labels should stay bright:\n%s", got)
+		t.Fatalf("precolored labels should not be restyled:\n%s", got)
 	}
 }
 

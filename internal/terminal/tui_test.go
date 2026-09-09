@@ -282,6 +282,36 @@ func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
 	}
 }
 
+func TestScenarioSectionLabelsRecedeBelowKeywords(t *testing.T) {
+	if scenarioSectionStyle.Render("OBJECTIVE") == scenarioInlineStyle.Render("OBJECTIVE") {
+		t.Fatal("section labels should not use the keyword style")
+	}
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:     "Inspect a Running Pod",
+			Objective: "Pay attention to `READY`.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, scenarioSectionStyle.Render("OBJECTIVE")) {
+		t.Fatalf("OBJECTIVE should use the receded section style:\n%s", view)
+	}
+	if strings.Contains(view, scenarioInlineStyle.Render("OBJECTIVE")) {
+		t.Fatalf("OBJECTIVE should not shout like a keyword:\n%s", view)
+	}
+	if !strings.Contains(view, scenarioInlineStyle.Render("READY")) {
+		t.Fatalf("inline keywords should stay bright:\n%s", view)
+	}
+	caption := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("LAB SHELL")
+	if !strings.Contains(view, caption) || !strings.Contains(view, "SCENARIO ·") {
+		t.Fatalf("pane captions should stay cyan:\n%s", view)
+	}
+}
+
 func TestScenarioAndShellTopBordersAlign(t *testing.T) {
 	model := scenarioViewModel{
 		width:  120,
