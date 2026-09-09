@@ -18,7 +18,7 @@ func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if strings.Join(ids, ",") != "pod-creation" {
+	if strings.Join(ids, ",") != "kubectl-basics,pod-creation" {
 		t.Fatalf("scenario order = %v", ids)
 	}
 	scenario, err := registry.LoadScenario("pod-creation")
@@ -28,20 +28,30 @@ func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
 	if scenario.Checks[0].Type != CheckObjectExists {
 		t.Fatalf("first check = %q", scenario.Checks[0].Type)
 	}
-	for _, pathID := range []string{"beginner", "cka", "ckad"} {
-		if got := strings.Join(registry.PlayOrder(pathID), ","); got != "pod-creation" {
-			t.Fatalf("PlayOrder(%q) = %s, want pod-creation", pathID, got)
+	welcome, err := registry.LoadScenario("kubectl-basics")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if welcome.Module != "welcome" || !welcome.Ungraded {
+		t.Fatalf("kubectl-basics module=%q ungraded=%v", welcome.Module, welcome.Ungraded)
+	}
+	if got := strings.Join(registry.PlayOrder("beginner"), ","); got != "kubectl-basics,pod-creation" {
+		t.Fatalf("PlayOrder(beginner) = %s", got)
+	}
+	for _, pathID := range []string{"cka", "ckad"} {
+		if got := strings.Join(registry.PlayOrder(pathID), ","); got != "kubectl-basics" {
+			t.Fatalf("PlayOrder(%q) = %s, want kubectl-basics", pathID, got)
 		}
 	}
 }
 
 func TestLoadFileCanonicalScenario(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "pods", "pod-creation.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "welcome", "pod-creation.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" || scenario.Module != "pods" {
+	if scenario.ID != "pod-creation" || scenario.Module != "welcome" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
 	}
 }
@@ -88,18 +98,18 @@ func TestLoadFSRejectsUnknownAuthoringFields(t *testing.T) {
 }
 
 func TestLoadFilePodCreation(t *testing.T) {
-	filename := filepath.Join("..", "..", "curriculum", "pods", "pod-creation.yaml")
+	filename := filepath.Join("..", "..", "curriculum", "welcome", "pod-creation.yaml")
 	scenario, err := LoadFile(filename)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" || scenario.Module != "pods" {
+	if scenario.ID != "pod-creation" || scenario.Module != "welcome" {
 		t.Fatalf("unexpected scenario: %#v", scenario)
 	}
 	if scenario.Mode != "challenge" {
 		t.Fatalf("mode = %q, want challenge", scenario.Mode)
 	}
-	if scenario.Namespace != "kubeprep-beginner" {
+	if scenario.Namespace != "kubeprep-pod-creation" {
 		t.Fatalf("namespace = %q", scenario.Namespace)
 	}
 	if len(scenario.Setup.Manifests) != 0 {
@@ -112,7 +122,7 @@ func TestLoadFilePodCreation(t *testing.T) {
 		t.Fatalf("checks = %d, want 2", len(scenario.Checks))
 	}
 	exists := scenario.Checks[0]
-	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubeprep-beginner" || exists.Name != "nginx" {
+	if exists.Type != CheckObjectExists || exists.Kind != "pod" || exists.Namespace != "kubeprep-pod-creation" || exists.Name != "nginx" {
 		t.Fatalf("objectExists check = %#v", exists)
 	}
 	image := scenario.Checks[1]
@@ -282,6 +292,8 @@ func TestValidateScenario(t *testing.T) {
 		{"unsupported track", func(s *Scenario) { s.Tracks = []string{"cissp"} }, "unsupported track"},
 		{"not exactly three hints", func(s *Scenario) { s.Hints = s.Hints[:2] }, "exactly 3"},
 		{"empty hint", func(s *Scenario) { s.Hints[1] = " " }, "hints[1]"},
+		{"missing checks", func(s *Scenario) { s.Checks = nil }, "at least one check"},
+		{"ungraded with checks", func(s *Scenario) { s.Ungraded = true }, "must be empty when ungraded"},
 		{"unsafe manifest reference", func(s *Scenario) { s.Setup.Manifests[0] = "../workload.yaml" }, "clean relative path"},
 		{"unknown typed check", func(s *Scenario) { s.Checks[0].Type = "runCommand" }, "unsupported check"},
 		{"podReady needs selector", func(s *Scenario) {
@@ -308,6 +320,26 @@ func TestValidateScenario(t *testing.T) {
 				t.Fatalf("Validate() error = %v, want %q", err, tt.want)
 			}
 		})
+	}
+}
+
+func TestValidateUngradedAllowsEmptyChecks(t *testing.T) {
+	scenario := validScenario()
+	scenario.Ungraded = true
+	scenario.Checks = nil
+	if err := Validate(scenario); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestLoadFileAcceptsUngradedOrientation(t *testing.T) {
+	filename := filepath.Join("..", "..", "curriculum", "welcome", "kubectl-basics.yaml")
+	scenario, err := LoadFile(filename)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scenario.ID != "kubectl-basics" || !scenario.Ungraded || len(scenario.Checks) != 0 {
+		t.Fatalf("kubectl-basics = id=%q ungraded=%v checks=%d", scenario.ID, scenario.Ungraded, len(scenario.Checks))
 	}
 }
 

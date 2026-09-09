@@ -235,7 +235,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			Namespace:  "kubeprep-test",
 			Resource:   "cluster nodes",
 		},
-		storyBeats: []string{"The cluster is already running."},
+		storyBeats: []string{"The cluster is already running.\n```\nkubectl get nodes\n```"},
 		status:     "Lab Shell is attached. Press F2 to validate cluster state.",
 		lab:        &memoryLab{view: "$ "},
 	}
@@ -461,6 +461,27 @@ func TestF10Quits(t *testing.T) {
 	_, cmd := model.Update(tea.KeyMsg{Type: tea.KeyF10})
 	if cmd == nil {
 		t.Fatal("expected quit command")
+	}
+}
+
+func TestUngradedLabFooterUsesContinue(t *testing.T) {
+	model := scenarioViewModel{
+		width:  80,
+		height: 24,
+		scenario: ScenarioView{
+			Ungraded:  true,
+			Title:     "Meet kubectl",
+			Objective: "Explore the cluster.",
+		},
+		status: "Lab Shell is attached. Press F2 when you are ready to continue.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, "[F2] continue") {
+		t.Fatalf("ungraded footer missing continue:\n%s", view)
+	}
+	if strings.Contains(view, "[F2] check") {
+		t.Fatalf("ungraded footer still says check:\n%s", view)
 	}
 }
 

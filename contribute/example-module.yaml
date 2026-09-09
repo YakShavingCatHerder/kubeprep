@@ -2,7 +2,7 @@
 # Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
 
 authoring:
-  # Domain folder and catalog section: api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
   section:
   # How much help this lab should give: guided | assisted | operator | exam.
   guidance:
@@ -68,7 +68,9 @@ reset:
   manifests: []
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
 # A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
-# Long pages still split if they do not fit the pane.
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+# Wrap copy-paste commands in fenced blocks (three backticks on their own lines).
+# Inline `code` highlights a token in a sentence. Keep fences indented inside the | block.
 description: |
 
 # Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
@@ -84,7 +86,8 @@ concepts:
 #   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
 #     podReady may set replicas for min Ready pods (default 1)
 #   nodeTopology: count, controlPlanes, workers
-# Uncomment the types you need. At least one check is required.
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
 checks:
   # - type: objectExists
   #  kind:

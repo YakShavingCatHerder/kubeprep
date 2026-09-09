@@ -10,8 +10,37 @@ import (
 
 	"github.com/YakShavingCatHerder/kubeprep/internal/curriculum"
 	"github.com/YakShavingCatHerder/kubeprep/internal/game"
+	"github.com/YakShavingCatHerder/kubeprep/internal/validator"
 	"github.com/spf13/cobra"
 )
+
+func TestEvaluateUngradedScenarioPassesWithoutCluster(t *testing.T) {
+	result, err := evaluateScenario(context.Background(), &curriculum.Scenario{Ungraded: true}, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result.Status != validator.Success {
+		t.Fatalf("status = %s, want success", result.Status)
+	}
+}
+
+func TestSetupObjectProbeAllowsUngradedLabs(t *testing.T) {
+	kind, namespace, name := setupObjectProbe(&curriculum.Scenario{Ungraded: true})
+	if kind != "" || namespace != "" || name != "" {
+		t.Fatalf("probe = %s %s/%s, want empty", kind, namespace, name)
+	}
+	kind, namespace, name = setupObjectProbe(&curriculum.Scenario{
+		Checks: []curriculum.Check{{
+			Type:      curriculum.CheckObjectExists,
+			Kind:      "pod",
+			Namespace: "kubeprep-test",
+			Name:      "welcome",
+		}},
+	})
+	if kind != "pod" || namespace != "kubeprep-test" || name != "welcome" {
+		t.Fatalf("probe = %s %s/%s", kind, namespace, name)
+	}
+}
 
 func TestBareCommandShowsHelp(t *testing.T) {
 	var output bytes.Buffer
@@ -96,8 +125,18 @@ func TestCurrentScenarioAdvancesThroughCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" {
+	if scenario.ID != "kubectl-basics" {
 		t.Fatalf("first scenario = %q", scenario.ID)
+	}
+	if err := store.CompleteScenario(scenario.ID); err != nil {
+		t.Fatal(err)
+	}
+	scenario, err = currentScenario(store, registry)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if scenario.ID != "pod-creation" {
+		t.Fatalf("second scenario = %q", scenario.ID)
 	}
 	if err := store.CompleteScenario(scenario.ID); err != nil {
 		t.Fatal(err)
@@ -160,8 +199,18 @@ func TestFollowingIncompleteScenario(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if next == nil || next.ID != "pod-creation" {
+	if next == nil || next.ID != "kubectl-basics" {
 		t.Fatalf("following scenario = %v", next)
+	}
+	if err := store.CompleteScenario("kubectl-basics"); err != nil {
+		t.Fatal(err)
+	}
+	next, err = followingIncompleteScenario(store, registry, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if next == nil || next.ID != "pod-creation" {
+		t.Fatalf("following scenario after welcome = %v", next)
 	}
 	if err := store.CompleteScenario("pod-creation"); err != nil {
 		t.Fatal(err)
@@ -194,8 +243,8 @@ func TestCurrentScenarioUsesCertificationTrackPlayOrder(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if scenario.ID != "pod-creation" {
-		t.Fatalf("first CKA scenario = %q, want pod-creation", scenario.ID)
+	if scenario.ID != "kubectl-basics" {
+		t.Fatalf("first CKA scenario = %q, want kubectl-basics", scenario.ID)
 	}
 }
 

@@ -27,11 +27,13 @@ type Scenario struct {
 	// and reset. Empty means the declared namespace is the only start state.
 	StartingClusterConfiguration string      `yaml:"startingClusterConfiguration,omitempty"`
 	Setup                        ResourceSet `yaml:"setup"`
-	Checks                       []Check     `yaml:"checks"`
-	Hints                        []string    `yaml:"hints"`
-	Completion                   string      `yaml:"completion"`
-	Debrief                      Debrief     `yaml:"debrief"`
-	Reset                        ResourceSet `yaml:"reset"`
+	// Ungraded labs have no target cluster state. F2 records completion.
+	Ungraded   bool        `yaml:"ungraded,omitempty"`
+	Checks     []Check     `yaml:"checks"`
+	Hints      []string    `yaml:"hints"`
+	Completion string      `yaml:"completion"`
+	Debrief    Debrief     `yaml:"debrief"`
+	Reset      ResourceSet `yaml:"reset"`
 }
 
 // KubernetesCompatibility declares the Kubernetes versions for which a scenario
