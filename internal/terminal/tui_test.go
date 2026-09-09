@@ -319,6 +319,128 @@ func TestCompletionPromptAppearsAfterSuccessfulCheck(t *testing.T) {
 	}
 }
 
+func TestLongScenarioTextUsesPages(t *testing.T) {
+	lab := &memoryLab{}
+	model := scenarioViewModel{
+		width:  120,
+		height: 24,
+		scenario: ScenarioView{
+			Title:      "Create Your First Pod",
+			Completion: "VISIBLE-TOP unique heading",
+			Debrief:    strings.Repeat("The API server persists the object and the scheduler binds a node.\n\n", 24) + "HIDDEN-BOTTOM unique tail",
+		},
+		lab:           lab,
+		state:         CheckSuccess,
+		advancePrompt: true,
+	}
+	view := model.View()
+	if !strings.Contains(view, "VISIBLE-TOP") {
+		t.Fatalf("top of debrief missing:\n%s", view)
+	}
+	if strings.Contains(view, "HIDDEN-BOTTOM") {
+		t.Fatalf("bottom of debrief should wait for the next page:\n%s", view)
+	}
+	if !strings.Contains(view, "page 1/") {
+		t.Fatalf("page cue missing:\n%s", view)
+	}
+
+	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+	if cmd != nil {
+		t.Fatal("paging should not start a TUI command")
+	}
+	got := next.(scenarioViewModel)
+	if got.storyPage != 1 {
+		t.Fatalf("page = %d, want 1", got.storyPage)
+	}
+	if strings.Contains(got.View(), "VISIBLE-TOP") {
+		t.Fatalf("page 2 still shows page 1 content:\n%s", got.View())
+	}
+	if len(lab.typed) != 0 {
+		t.Fatalf("Alt+Right was forwarded to the lab shell: %q", lab.typed)
+	}
+
+	seen := map[int]bool{}
+	for {
+		if strings.Contains(got.View(), "HIDDEN-BOTTOM") {
+			break
+		}
+		if seen[got.storyPage] {
+			t.Fatalf("paged view never reached the debrief tail:\n%s", got.View())
+		}
+		seen[got.storyPage] = true
+		next, _ = got.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+		got = next.(scenarioViewModel)
+	}
+
+	next, _ = model.Update(tea.KeyMsg{Type: tea.KeyDown})
+	if strings.Join(lab.typed, "") == "" {
+		t.Fatal("plain Down should still be typed into the lab shell")
+	}
+	_ = next
+}
+
+func TestAuthorPageBreakSplitsScenarioPane(t *testing.T) {
+	story := "PAGE-ONE-UNIQUE\n\n::page::\n\nPAGE-TWO-UNIQUE"
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:       "Author pages",
+			Description: story,
+			Objective:   "Create the Pod.",
+		},
+		storyBeats: splitStoryBeats(story),
+		lab:        &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, "PAGE-ONE-UNIQUE") {
+		t.Fatalf("page 1 missing:\n%s", view)
+	}
+	if strings.Contains(view, "PAGE-TWO-UNIQUE") {
+		t.Fatalf("page 2 leaked onto page 1:\n%s", view)
+	}
+	if strings.Contains(view, "::page::") {
+		t.Fatalf("page-break marker should be hidden:\n%s", view)
+	}
+
+	next, _ := model.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})
+	got := next.(scenarioViewModel)
+	view = got.View()
+	if !strings.Contains(view, "PAGE-TWO-UNIQUE") {
+		t.Fatalf("page 2 missing after Alt+Right:\n%s", view)
+	}
+	if strings.Contains(view, "PAGE-ONE-UNIQUE") {
+		t.Fatalf("page 1 leaked onto page 2:\n%s", view)
+	}
+}
+
+func TestCompletionResetsScenarioPage(t *testing.T) {
+	model := scenarioViewModel{
+		ctx:       context.Background(),
+		width:     120,
+		height:    24,
+		storyPage: 3,
+		scenario: ScenarioView{
+			HasNext:  true,
+			Complete: func() error { return nil },
+		},
+		lab: &memoryLab{},
+	}
+	next, cmd := model.Update(checkResultMsg{state: CheckSuccess, message: "ok"})
+	got := next.(scenarioViewModel)
+	if got.storyPage != 0 {
+		t.Fatalf("page after success = %d, want 0", got.storyPage)
+	}
+	if cmd == nil {
+		t.Fatal("expected completion save command")
+	}
+	next, _ = got.Update(cmd().(completionSavedMsg))
+	got = next.(scenarioViewModel)
+	if got.storyPage != 0 {
+		t.Fatalf("page after continue prompt = %d, want 0", got.storyPage)
+	}
+}
+
 func TestLetterQDoesNotQuit(t *testing.T) {
 	lab := &memoryLab{}
 	model := scenarioViewModel{lab: lab}

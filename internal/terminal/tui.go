@@ -117,6 +117,7 @@ type scenarioViewModel struct {
 	observeDeadline time.Time
 	advancePrompt   bool
 	continueNext    bool
+	storyPage       int
 }
 
 func (m scenarioViewModel) Init() tea.Cmd {
@@ -205,6 +206,7 @@ func (m scenarioViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width, m.height = msg.Width, msg.Height
 		m.applyLayout()
+		m.storyPage = m.clampedStoryPage()
 	case tea.KeyMsg:
 		action, reserved := reservedActionFor(msg, m.prefix, m.advancePrompt)
 		if reserved {
@@ -219,6 +221,12 @@ func (m scenarioViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			case actionZoom:
 				m.zoomed = !m.zoomed
 				m.applyLayout()
+			case actionPagePrev:
+				m.storyPage = m.clampedStoryPage() - 1
+				m.storyPage = m.clampedStoryPage()
+			case actionPageNext:
+				m.storyPage = m.clampedStoryPage() + 1
+				m.storyPage = m.clampedStoryPage()
 			case actionContinue:
 				if m.advancePrompt && m.scenario.HasNext {
 					m.continueNext = true
@@ -289,6 +297,7 @@ func (m scenarioViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.status = "The target state has not been reached."
 		}
 		if msg.state == CheckSuccess && m.scenario.Complete != nil {
+			m.storyPage = 0
 			return m, func() tea.Msg { return completionSavedMsg{err: m.scenario.Complete()} }
 		}
 		if msg.state == CheckSuccess {
@@ -322,6 +331,7 @@ func (m scenarioViewModel) useHint() (tea.Model, tea.Cmd) {
 
 func (m scenarioViewModel) enableAdvancePrompt() scenarioViewModel {
 	m.advancePrompt = true
+	m.storyPage = 0
 	if m.scenario.HasNext {
 		title := m.scenario.NextTitle
 		if title == "" {
@@ -384,13 +394,13 @@ func (m scenarioViewModel) View() string {
 		muted.Render(fmt.Sprintf("SCENARIO %s · MODULE %s · TRACK %s", m.scenario.ScenarioID, m.scenario.Module, m.scenario.Experience))
 	header = lipgloss.NewStyle().Width(layout.Header.Width).MaxHeight(layout.Header.Height).Render(header)
 
-	keys := "[?] hint  [F2] check  [F11] zoom  [F10] quit"
+	keys := "[?] hint  [F2] check  [F11] zoom  [Alt+←→] page  [F10] quit"
 	if m.advancePrompt && m.scenario.HasNext {
-		keys = "[y] next scenario  [n] stay done  [F10] quit"
+		keys = "[y] next  [n] stay  [Alt+←→] page  [F10] quit"
 	} else if m.advancePrompt {
-		keys = "[F10] quit"
+		keys = "[Alt+←→] page  [F10] quit"
 	} else if m.prefix {
-		keys = "Prefix: [h] hint  [c] check  [z] zoom  [q] quit"
+		keys = "Prefix: [h] hint  [c] check  [n/p] page  [z] zoom  [q] quit"
 	}
 	footerText := muted.Render(keys)
 	if hint := m.currentHint(); hint != "" {
@@ -409,10 +419,9 @@ func (m scenarioViewModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, header, scenario, shell, footer)
 }
 
-func (m scenarioViewModel) scenarioPane(size pane) string {
+func (m scenarioViewModel) scenarioBody() string {
 	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
-	inner := size.Inner()
 
 	var body strings.Builder
 	body.WriteString(label.Render(m.scenario.Title) + "\n")
@@ -464,14 +473,48 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 	if m.shellError != nil {
 		body.WriteString("\n\n" + muted.Render(m.shellError.Error()))
 	}
+	return body.String()
+}
 
+func (m scenarioViewModel) scenarioPages() [][]string {
+	width, height := m.width, m.height
+	if width <= 0 {
+		width = defaultWidth
+	}
+	if height <= 0 {
+		height = defaultHeight
+	}
+	inner := computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario.Inner()
 	if inner.Width < 1 {
 		inner.Width = 1
 	}
 	if inner.Height < 1 {
 		inner.Height = 1
 	}
-	content := lipgloss.NewStyle().Width(inner.Width).Height(inner.Height).MaxWidth(inner.Width).MaxHeight(inner.Height).Render(body.String())
+	return paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+}
+
+func (m scenarioViewModel) clampedStoryPage() int {
+	return clampStoryPage(m.storyPage, len(m.scenarioPages()))
+}
+
+func (m scenarioViewModel) scenarioPane(size pane) string {
+	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
+	inner := size.Inner()
+	if inner.Width < 1 {
+		inner.Width = 1
+	}
+	if inner.Height < 1 {
+		inner.Height = 1
+	}
+
+	pages := paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+	page := clampStoryPage(m.storyPage, len(pages))
+	content := strings.Join(pages[page], "\n")
+	if hint := scenarioPageHint(page, len(pages)); hint != "" {
+		content += "\n" + muted.Render(hint)
+	}
+	content = lipgloss.NewStyle().Width(inner.Width).Height(inner.Height).MaxWidth(inner.Width).MaxHeight(inner.Height).Render(content)
 	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Width(inner.Width).Height(inner.Height).Render(content)
 }
 

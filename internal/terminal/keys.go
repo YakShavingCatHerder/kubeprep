@@ -16,6 +16,8 @@ const (
 	actionZoom     reservedAction = "zoom"
 	actionQuit     reservedAction = "quit"
 	actionContinue reservedAction = "continue"
+	actionPagePrev reservedAction = "page-prev"
+	actionPageNext reservedAction = "page-next"
 )
 
 func reservedActionFor(msg tea.KeyMsg, prefix bool, prompting bool) (reservedAction, bool) {
@@ -36,6 +38,10 @@ func reservedActionFor(msg tea.KeyMsg, prefix bool, prompting bool) (reservedAct
 		return actionQuit, true
 	case "f11", "alt+z":
 		return actionZoom, true
+	case "alt+left", "alt+up", "alt+k", "alt+p", "alt+pgup":
+		return actionPagePrev, true
+	case "alt+right", "alt+down", "alt+j", "alt+n", "alt+pgdown":
+		return actionPageNext, true
 	case "ctrl+g":
 		return actionPrefix, true
 	}
@@ -63,6 +69,10 @@ func reservedActionFor(msg tea.KeyMsg, prefix bool, prompting bool) (reservedAct
 		return actionZoom, true
 	case "q":
 		return actionQuit, true
+	case "k", "p", "left", "up", "pgup":
+		return actionPagePrev, true
+	case "j", "n", "right", "down", "pgdown":
+		return actionPageNext, true
 	default:
 		return actionNone, true
 	}
