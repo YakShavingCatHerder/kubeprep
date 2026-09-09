@@ -10,6 +10,7 @@ paths:
         labs:
           - kubectl-basics
           - pod-creation
+          - pod-inspection
   - id: cka
     title: CKA
     sections:
