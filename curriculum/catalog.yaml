@@ -11,6 +11,7 @@ paths:
           - kubectl-basics
           - pod-creation
           - pod-inspection
+          - pod-exec
   - id: cka
     title: CKA
     sections:
