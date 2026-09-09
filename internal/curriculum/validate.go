@@ -104,8 +104,11 @@ func Validate(scenario *Scenario) error {
 		}
 		switch check.Type {
 		case CheckPodReady, CheckContainersHealthy:
-			if strings.TrimSpace(check.Namespace) == "" || strings.TrimSpace(check.Selector) == "" {
-				return fmt.Errorf("checks[%d]: namespace and selector must not be empty", i)
+			if strings.TrimSpace(check.Namespace) == "" {
+				return fmt.Errorf("checks[%d]: namespace must not be empty", i)
+			}
+			if strings.TrimSpace(check.Selector) == "" {
+				return fmt.Errorf("checks[%d]: selector must not be empty (%s matches a label selector, not name)", i, check.Type)
 			}
 		case CheckNodeTopology:
 			if check.Count == nil || check.ControlPlanes == nil || check.Workers == nil {
@@ -119,12 +122,18 @@ func Validate(scenario *Scenario) error {
 			if strings.TrimSpace(check.Kind) == "" || strings.TrimSpace(check.Name) == "" {
 				return fmt.Errorf("checks[%d]: kind and name must not be empty", i)
 			}
+			if strings.TrimSpace(check.Namespace) == "" {
+				return fmt.Errorf("checks[%d]: namespace must not be empty", i)
+			}
 			if check.Type == CheckFieldEquals && strings.TrimSpace(check.Field) == "" {
 				return fmt.Errorf("checks[%d].field: must not be empty", i)
 			}
-		default:
-			if strings.TrimSpace(check.Name) == "" {
-				return fmt.Errorf("checks[%d].name: must not be empty", i)
+			if check.Type == CheckFieldEquals && check.Value == "" {
+				return fmt.Errorf("checks[%d].value: must not be empty", i)
+			}
+		case CheckDeploymentAvailable:
+			if strings.TrimSpace(check.Namespace) == "" || strings.TrimSpace(check.Name) == "" {
+				return fmt.Errorf("checks[%d]: namespace and name must not be empty", i)
 			}
 		}
 	}

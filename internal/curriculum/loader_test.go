@@ -284,6 +284,15 @@ func TestValidateScenario(t *testing.T) {
 		{"empty hint", func(s *Scenario) { s.Hints[1] = " " }, "hints[1]"},
 		{"unsafe manifest reference", func(s *Scenario) { s.Setup.Manifests[0] = "../workload.yaml" }, "clean relative path"},
 		{"unknown typed check", func(s *Scenario) { s.Checks[0].Type = "runCommand" }, "unsupported check"},
+		{"podReady needs selector", func(s *Scenario) {
+			s.Checks[0] = Check{Type: CheckPodReady, Namespace: "kubeprep-test", Name: "nginx"}
+		}, "selector"},
+		{"fieldEquals needs value", func(s *Scenario) {
+			s.Checks[0] = Check{Type: CheckFieldEquals, Kind: "pod", Namespace: "kubeprep-test", Name: "nginx", Field: "spec.foo"}
+		}, "value"},
+		{"deploymentAvailable needs namespace", func(s *Scenario) {
+			s.Checks[0] = Check{Type: CheckDeploymentAvailable, Name: "web"}
+		}, "namespace"},
 		{"inverted Kubernetes range", func(s *Scenario) { s.Kubernetes.Min = "1.36" }, "newer than"},
 		{"unscoped namespace", func(s *Scenario) { s.Namespace = "default" }, "kubeprep-*"},
 		{"challenge without start state", func(s *Scenario) { s.Setup.Manifests = nil; s.Reset.Manifests = nil }, "must contain at least one manifest"},
