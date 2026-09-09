@@ -389,12 +389,9 @@ func (m scenarioViewModel) View() string {
 	}
 	layout := computeSplitLayout(width, height, m.zoomed, m.footerHeight())
 
-	title := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("63"))
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
-	header := title.Render("KubePrep · Kubernetes Scenario Runner") + "\n" +
-		muted.Render(fmt.Sprintf("SCENARIO %s · MODULE %s · TRACK %s", m.scenario.ScenarioID, m.scenario.Module, m.scenario.Experience))
+	header := muted.Render(fitCells(m.headerText(), layout.Header.Width))
 	header = lipgloss.NewStyle().Width(layout.Header.Width).MaxHeight(layout.Header.Height).Render(header)
 
 	keys := "[?] hint  [F2] check  [F11] zoom  [Alt+←→] page  [F10] quit"
@@ -410,7 +407,7 @@ func (m scenarioViewModel) View() string {
 	}
 	footerText := muted.Render(keys)
 	if hint := m.currentHint(); hint != "" {
-		footerText = label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + styleScenarioMarkup(hint) + "\n" + muted.Render(keys)
+		footerText = scenarioSectionStyle.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "  " + styleScenarioMarkup(hint) + "\n" + muted.Render(keys)
 	}
 	footer := lipgloss.NewStyle().Width(layout.Footer.Width).MaxHeight(layout.Footer.Height).Render(footerText)
 
@@ -425,19 +422,41 @@ func (m scenarioViewModel) View() string {
 	return lipgloss.JoinVertical(lipgloss.Left, header, scenario, shell, footer)
 }
 
+func (m scenarioViewModel) headerText() string {
+	title := strings.TrimSpace(m.scenario.Title)
+	if title == "" {
+		title = strings.TrimSpace(m.scenario.ScenarioID)
+	}
+	var parts []string
+	if title != "" {
+		parts = append(parts, title)
+	}
+	if track := strings.TrimSpace(m.scenario.Experience); track != "" {
+		parts = append(parts, track)
+	}
+	if !m.zoomed {
+		pages := m.scenarioPages()
+		if cue := scenarioPageCue(m.clampedStoryPage(), len(pages)); cue != "" {
+			parts = append(parts, cue)
+		}
+	}
+	if len(parts) == 0 {
+		return "KubePrep"
+	}
+	return strings.Join(parts, " · ")
+}
+
 func (m scenarioViewModel) scenarioBody() string {
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
 
 	var body strings.Builder
-	body.WriteString(label.Render(m.scenario.Title) + "\n")
 	if m.state == CheckSuccess {
-		body.WriteString(label.Render("SCENARIO COMPLETED") + "\n\n")
+		body.WriteString(scenarioSectionStyle.Render("SCENARIO COMPLETED") + "\n\n")
 		if text := strings.TrimSpace(m.scenario.Completion); text != "" {
 			body.WriteString(text + "\n\n")
 		}
 		if text := strings.TrimSpace(m.scenario.Debrief); text != "" {
-			body.WriteString(label.Render("EXPLANATION") + "\n")
+			body.WriteString(scenarioSectionStyle.Render("EXPLANATION") + "\n")
 			body.WriteString(text + "\n")
 		}
 		if m.advancePrompt && m.scenario.HasNext {
@@ -445,19 +464,19 @@ func (m scenarioViewModel) scenarioBody() string {
 			if title == "" {
 				title = "the next scenario"
 			}
-			body.WriteString("\n" + label.Render("CONTINUE") + "\n")
+			body.WriteString("\n" + scenarioSectionStyle.Render("CONTINUE") + "\n")
 			body.WriteString("Continue to " + title + "?\nPress y to continue, or F10 when you are done training.\n")
 		} else if m.advancePrompt {
-			body.WriteString("\n" + label.Render("TRAINING COMPLETE") + "\n")
+			body.WriteString("\n" + scenarioSectionStyle.Render("TRAINING COMPLETE") + "\n")
 			body.WriteString("No further scenarios remain on this track. Press F10 to leave.\n")
 		}
 	} else {
 		if desc := strings.Join(m.storyBeats, "\n\n"); desc != "" {
 			body.WriteString(desc + "\n\n")
 		}
-		body.WriteString(label.Render("OBJECTIVE") + "\n")
+		body.WriteString(scenarioSectionStyle.Render("OBJECTIVE") + "\n")
 		body.WriteString(m.scenario.Objective + "\n\n")
-		body.WriteString(label.Render("VALIDATION") + "\n")
+		body.WriteString(scenarioSectionStyle.Render("VALIDATION") + "\n")
 		if m.scenario.Resource != "" {
 			body.WriteString(m.scenario.Resource + "\n")
 		}
@@ -472,7 +491,7 @@ func (m scenarioViewModel) scenarioBody() string {
 			body.WriteString("\n" + muted.Render("Checking cluster state…"))
 		}
 		if m.hintLevel > 0 && m.hintLevel <= len(m.scenario.Hints) {
-			body.WriteString("\n\n" + label.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "\n")
+			body.WriteString("\n\n" + scenarioSectionStyle.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "\n")
 			body.WriteString(m.scenario.Hints[m.hintLevel-1])
 		}
 	}
@@ -490,14 +509,8 @@ func (m scenarioViewModel) scenarioPages() [][]string {
 	if height <= 0 {
 		height = defaultHeight
 	}
-	inner := computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario.Inner()
-	if inner.Width < 1 {
-		inner.Width = 1
-	}
-	if inner.Height < 1 {
-		inner.Height = 1
-	}
-	return paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+	_, _, story := scenarioPaneRegions(computeSplitLayout(width, height, m.zoomed, m.footerHeight()).Scenario)
+	return paginateScenario(m.scenarioBody(), story.Width, story.Height)
 }
 
 func (m scenarioViewModel) clampedStoryPage() int {
@@ -505,23 +518,33 @@ func (m scenarioViewModel) clampedStoryPage() int {
 }
 
 func (m scenarioViewModel) scenarioPane(size pane) string {
-	muted := lipgloss.NewStyle().Foreground(lipgloss.Color("243"))
-	inner := size.Inner()
-	if inner.Width < 1 {
-		inner.Width = 1
-	}
-	if inner.Height < 1 {
-		inner.Height = 1
-	}
+	inner, captionHeight, story := scenarioPaneRegions(size)
 
-	pages := paginateScenario(m.scenarioBody(), inner.Width, inner.Height)
+	pages := paginateScenario(m.scenarioBody(), story.Width, story.Height)
 	page := clampStoryPage(m.storyPage, len(pages))
-	content := strings.Join(pages[page], "\n")
-	if hint := scenarioPageHint(page, len(pages)); hint != "" {
-		content += "\n" + muted.Render(hint)
+	body := strings.Join(pages[page], "\n")
+	body = lipgloss.NewStyle().Width(story.Width).Height(story.Height).MaxWidth(story.Width).MaxHeight(story.Height).Render(body)
+	bodyHeight := inner.Height - captionHeight
+	if bodyHeight < 1 {
+		bodyHeight = 1
 	}
-	content = lipgloss.NewStyle().Width(inner.Width).Height(inner.Height).MaxWidth(inner.Width).MaxHeight(inner.Height).Render(content)
-	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Width(inner.Width).Height(inner.Height).Render(content)
+	body = lipgloss.NewStyle().
+		Padding(0, scenarioInnerPad, scenarioInnerPad, scenarioInnerPad).
+		Width(inner.Width).
+		Height(bodyHeight).
+		MaxWidth(inner.Width).
+		MaxHeight(bodyHeight).
+		Render(body)
+
+	content := body
+	if captionHeight > 0 {
+		content = scenarioPaneCaption(m.scenario.Title, inner.Width) + "\n" + body
+	}
+	return lipgloss.NewStyle().
+		Border(lipgloss.NormalBorder()).
+		Width(inner.Width).
+		Height(inner.Height).
+		Render(content)
 }
 
 func (m scenarioViewModel) shellPane(size pane) string {

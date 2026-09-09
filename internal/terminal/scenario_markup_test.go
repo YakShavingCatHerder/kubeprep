@@ -15,7 +15,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestStyleScenarioMarkupHidesFenceMarkers(t *testing.T) {
-	got := styleScenarioMarkup("Start with:\n```\nkubectl get pod nginx\n```\nThen compare.")
+	got := styleScenarioMarkup("Start with:\n```kubectl\nkubectl get pod nginx\n```\nThen compare.")
 	if strings.Contains(got, "```") {
 		t.Fatalf("fence markers still visible:\n%s", got)
 	}
@@ -28,8 +28,11 @@ func TestStyleScenarioMarkupHidesFenceMarkers(t *testing.T) {
 	if !strings.Contains(got, "\x1b") {
 		t.Fatal("expected ANSI styling on the fenced command")
 	}
-	if !strings.Contains(got, "│ ") {
-		t.Fatal("expected a gutter on the fenced command")
+	if !strings.Contains(got, scenarioPromptStyle.Render(scenarioPrompt)) {
+		t.Fatal("expected a prompt on the fenced command")
+	}
+	if strings.Contains(got, "│ ") {
+		t.Fatal("commands should not use a box-drawing gutter")
 	}
 	code := scenarioCodeStyle.Render("kubectl get pod nginx")
 	if strings.Contains(code, "48;") {
@@ -68,24 +71,67 @@ func TestStyleScenarioMarkupDistinguishesCommandsFromKeywords(t *testing.T) {
 	if scenarioCodeStyle.Render("READY") == scenarioInlineStyle.Render("READY") {
 		t.Fatal("command and keyword styles should differ")
 	}
-	got := styleScenarioMarkup("See `READY` then:\n```\nkubectl get pod nginx\n```")
-	if !strings.Contains(got, "│ ") {
-		t.Fatal("commands should keep the gutter")
+	got := styleScenarioMarkup("See `READY` then:\n```kubectl\nkubectl get pod nginx\n```")
+	prompt := scenarioPromptStyle.Render(scenarioPrompt)
+	if !strings.Contains(got, prompt) {
+		t.Fatal("commands should show a prompt")
 	}
 	ready := strings.Index(got, "READY")
-	gutter := strings.Index(got, "│ ")
-	if ready < 0 || gutter < 0 {
+	dollar := strings.Index(got, prompt)
+	if ready < 0 || dollar < 0 {
 		t.Fatalf("missing pieces:\n%s", got)
 	}
-	if ready > gutter {
+	if ready > dollar {
 		t.Fatal("expected the keyword before the fenced command in this sample")
 	}
 }
 
 func TestStyleScenarioMarkupLeavesUnmatchedBacktick(t *testing.T) {
-	const raw = "Leave this `alone"
-	if got := styleScenarioMarkup(raw); got != raw {
-		t.Fatalf("got %q, want unchanged", got)
+	got := styleScenarioMarkup("Leave this `alone")
+	if !strings.Contains(got, "`alone") {
+		t.Fatalf("unmatched backtick should stay visible:\n%s", got)
+	}
+}
+
+func TestStyleScenarioMarkupDimsProseAndKeepsLabels(t *testing.T) {
+	if styleScenarioMarkup("Inspect the cluster.") == "Inspect the cluster." {
+		t.Fatal("prose should be dimmed")
+	}
+	if styleScenarioMarkup("Inspect the cluster.") == scenarioInlineStyle.Render("Inspect the cluster.") {
+		t.Fatal("prose should not use the keyword style")
+	}
+	label := scenarioSectionStyle.Render("OBJECTIVE")
+	got := styleScenarioMarkup(label + "\nInspect the cluster.")
+	if !strings.Contains(got, label) {
+		t.Fatalf("precolored labels should not be restyled:\n%s", got)
+	}
+}
+
+func TestStyleScenarioMarkupCommandsDifferFromDiagrams(t *testing.T) {
+	command := styleScenarioMarkup("```kubectl\nkubectl get pod nginx\n```")
+	diagram := styleScenarioMarkup("```text\nkubectl\n  -> API server\n```")
+	if command == diagram {
+		t.Fatal("command fences and diagram fences should render differently")
+	}
+	prompt := scenarioPromptStyle.Render(scenarioPrompt)
+	if !strings.Contains(command, prompt) {
+		t.Fatalf("kubectl fence should show a prompt:\n%s", command)
+	}
+	if strings.Contains(diagram, prompt) {
+		t.Fatalf("text fence should not show a prompt:\n%s", diagram)
+	}
+	if !strings.Contains(command, scenarioCodeStyle.Render("kubectl get pod nginx")) {
+		t.Fatalf("kubectl fence should use the command style:\n%s", command)
+	}
+	if strings.Contains(diagram, scenarioCodeStyle.Render("kubectl")) {
+		t.Fatalf("text fence should not use the command style:\n%s", diagram)
+	}
+	unlabeled := styleScenarioMarkup("```\nscheduling the Pod\n```")
+	if strings.Contains(unlabeled, scenarioCodeStyle.Render("scheduling the Pod")) {
+		t.Fatalf("unlabeled fences should be diagrams, not commands:\n%s", unlabeled)
+	}
+	if !strings.Contains(unlabeled, scenarioDiagramStyle.Render(scenarioDiagramIndent+"scheduling the Pod")) {
+		t.Fatalf("unlabeled fences should be indented diagrams:\n%s", unlabeled)
 	}
 }
 

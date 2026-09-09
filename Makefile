@@ -40,7 +40,7 @@ validate-lab:
 	go build -ldflags="$(LDFLAGS)" -o bin/kubeprep ./cmd/kubeprep
 	./bin/kubeprep lab validate "$(CURRICULUM)"
 
-# Records docs/demo.gif (lab try → split TUI). Needs vhs, ffmpeg, ttyd, and an existing training cluster.
+# Records docs/demo.gif (lab try pod-inspection → split TUI). Needs vhs, ffmpeg, ttyd, and an existing training cluster.
 demo: build
 	./bin/kubeprep start --track=beginner --prepare-only
 	vhs docs/demo.tape

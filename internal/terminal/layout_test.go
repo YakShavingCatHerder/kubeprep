@@ -20,6 +20,18 @@ func TestComputeSplitLayoutUsesSideBySideWhenWide(t *testing.T) {
 	}
 }
 
+func TestPaneContentInsetsBorderAndPadding(t *testing.T) {
+	p := pane{Width: 40, Height: 20}
+	inner := p.Inner()
+	if inner.Width != 38 || inner.Height != 18 {
+		t.Fatalf("Inner() = %+v", inner)
+	}
+	content := p.Content()
+	if content.Width != 36 || content.Height != 16 {
+		t.Fatalf("Content() = %+v, want 36x16", content)
+	}
+}
+
 func TestComputeSplitLayoutStacksOnEightyColumns(t *testing.T) {
 	layout := computeSplitLayout(80, 24, false, defaultFooterLines)
 	if layout.SideBySide {

@@ -3,6 +3,8 @@ package terminal
 import (
 	"strings"
 	"testing"
+
+	"github.com/charmbracelet/lipgloss"
 )
 
 func TestClampStoryPage(t *testing.T) {
@@ -14,17 +16,14 @@ func TestClampStoryPage(t *testing.T) {
 	}
 }
 
-func TestPaginateScenarioReservesHintRow(t *testing.T) {
+func TestPaginateScenarioFillsViewport(t *testing.T) {
 	text := strings.Repeat("line\n", 10)
 	pages := paginateScenario(text, 20, 4)
-	if len(pages) != 4 {
-		t.Fatalf("pages = %d, want 4", len(pages))
+	if len(pages) != 3 {
+		t.Fatalf("pages = %d, want 3", len(pages))
 	}
-	if len(pages[0]) != 3 {
-		t.Fatalf("first page lines = %d, want 3 so the page cue fits", len(pages[0]))
-	}
-	if len(pages[3]) != 1 {
-		t.Fatalf("last page lines = %d, want 1", len(pages[3]))
+	if len(pages[0]) != 4 {
+		t.Fatalf("first page lines = %d, want 4", len(pages[0]))
 	}
 }
 
@@ -62,5 +61,34 @@ func TestLongForcedPageStillAutoSplits(t *testing.T) {
 	}
 	if !strings.Contains(strings.Join(pages[0], "\n"), "short") {
 		t.Fatalf("first page = %q", pages[0])
+	}
+}
+
+func TestScenarioPageCueOmitsSinglePage(t *testing.T) {
+	if got := scenarioPageCue(0, 1); got != "" {
+		t.Fatalf("single page cue = %q", got)
+	}
+	if got := scenarioPageCue(1, 5); got != "2/5" {
+		t.Fatalf("cue = %q, want 2/5", got)
+	}
+}
+
+func TestFitCellsTruncatesWithEllipsis(t *testing.T) {
+	got := fitCells("SCENARIO · A Very Long Lab Title", 12)
+	if lipgloss.Width(got) > 12 {
+		t.Fatalf("width = %d, want <= 12: %q", lipgloss.Width(got), got)
+	}
+	if !strings.Contains(got, "…") {
+		t.Fatalf("expected ellipsis, got %q", got)
+	}
+}
+
+func TestSplitScenarioCaptionReservesOneRow(t *testing.T) {
+	inner, cap, story := scenarioPaneRegions(pane{Width: 40, Height: 20})
+	if inner.Width != 38 || inner.Height != 18 {
+		t.Fatalf("inner = %+v", inner)
+	}
+	if cap != 1 || story.Width != 36 || story.Height != 16 {
+		t.Fatalf("caption=%d story=%+v", cap, story)
 	}
 }

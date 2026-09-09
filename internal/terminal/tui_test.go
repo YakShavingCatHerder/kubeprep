@@ -235,7 +235,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			Namespace:  "kubeprep-test",
 			Resource:   "cluster nodes",
 		},
-		storyBeats: []string{"The cluster is already running.\n```\nkubectl get nodes\n```"},
+		storyBeats: []string{"The cluster is already running.\n```kubectl\nkubectl get nodes\n```"},
 		status:     "Lab Shell is attached. Press F2 to validate cluster state.",
 		lab:        &memoryLab{view: "$ "},
 	}
@@ -245,10 +245,107 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			t.Fatalf("line %d width = %d, want <= 80: %q", lineNumber+1, width, line)
 		}
 	}
-	for _, text := range []string{"OBJECTIVE", "VALIDATION", "LAB SHELL", "F2", "hint"} {
+	for _, text := range []string{"SCENARIO", "Test Scenario", "beginner", "LAB SHELL", "F2", "hint"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("view does not contain %q", text)
 		}
+	}
+	if strings.Contains(view, "Kubernetes Scenario Runner") || strings.Contains(view, "MODULE ") {
+		t.Fatalf("window header should be quiet:\n%s", view)
+	}
+	first := strings.SplitN(view, "\n", 2)[0]
+	if !strings.Contains(first, "Test Scenario") || !strings.Contains(first, "beginner") {
+		t.Fatalf("header should be title · track, got %q", first)
+	}
+}
+
+func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
+	model := scenarioViewModel{
+		width:  80,
+		height: 36,
+		scenario: ScenarioView{
+			Title:     "PadProbeTitle",
+			Objective: "Inspect the cluster.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, "PadProbeTitle") {
+		t.Fatalf("title missing:\n%s", view)
+	}
+	if !strings.Contains(view, "SCENARIO") {
+		t.Fatalf("scenario caption missing:\n%s", view)
+	}
+	if strings.Contains(view, "│PadProbeTitle") || strings.Contains(view, "│OBJECTIVE") {
+		t.Fatalf("scenario text sits against the border:\n%s", view)
+	}
+}
+
+func TestScenarioSectionLabelsRecedeBelowKeywords(t *testing.T) {
+	if scenarioSectionStyle.Render("OBJECTIVE") == scenarioInlineStyle.Render("OBJECTIVE") {
+		t.Fatal("section labels should not use the keyword style")
+	}
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:     "Inspect a Running Pod",
+			Objective: "Pay attention to `READY`.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if !strings.Contains(view, scenarioSectionStyle.Render("OBJECTIVE")) {
+		t.Fatalf("OBJECTIVE should use the receded section style:\n%s", view)
+	}
+	if strings.Contains(view, scenarioInlineStyle.Render("OBJECTIVE")) {
+		t.Fatalf("OBJECTIVE should not shout like a keyword:\n%s", view)
+	}
+	if !strings.Contains(view, scenarioInlineStyle.Render("READY")) {
+		t.Fatalf("inline keywords should stay bright:\n%s", view)
+	}
+	caption := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("LAB SHELL")
+	if !strings.Contains(view, caption) || !strings.Contains(view, "SCENARIO ·") {
+		t.Fatalf("pane captions should stay cyan:\n%s", view)
+	}
+}
+
+func TestScenarioAndShellTopBordersAlign(t *testing.T) {
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:     "Inspect a Running Pod",
+			Objective: "Inspect the cluster.",
+		},
+		status: "Lab Shell is attached.",
+		lab:    &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	shared := 0
+	staggered := 0
+	for _, line := range strings.Split(view, "\n") {
+		switch strings.Count(line, "┌") {
+		case 2:
+			shared++
+		case 1:
+			staggered++
+		}
+	}
+	if shared != 1 {
+		t.Fatalf("want one shared top-border row, got %d shared and %d staggered:\n%s", shared, staggered, view)
+	}
+	aligned := false
+	for _, line := range strings.Split(view, "\n") {
+		if strings.Contains(line, "LAB SHELL") && strings.Contains(line, "SCENARIO ·") {
+			aligned = true
+			break
+		}
+	}
+	if !aligned {
+		t.Fatalf("SCENARIO caption and LAB SHELL should share a row:\n%s", view)
 	}
 }
 
@@ -340,8 +437,11 @@ func TestLongScenarioTextUsesPages(t *testing.T) {
 	if strings.Contains(view, "HIDDEN-BOTTOM") {
 		t.Fatalf("bottom of debrief should wait for the next page:\n%s", view)
 	}
-	if !strings.Contains(view, "page 1/") {
-		t.Fatalf("page cue missing:\n%s", view)
+	if !strings.Contains(view, " · 1/") {
+		t.Fatalf("page cue missing from header:\n%s", view)
+	}
+	if strings.Contains(view, "page 1/") {
+		t.Fatalf("page cue should not occupy a scenario row:\n%s", view)
 	}
 
 	next, cmd := model.Update(tea.KeyMsg{Type: tea.KeyRight, Alt: true})

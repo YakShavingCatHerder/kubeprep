@@ -69,7 +69,8 @@ reset:
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
 # A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
 # Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
-# Wrap copy-paste commands in fenced blocks (three backticks on their own lines).
+# Wrap copy-paste commands in ```kubectl fences (the pane adds a $; do not type it here).
+# Unlabeled / text / yaml fences indent as diagrams.
 # Inline `code` highlights a token in a sentence. Keep fences indented inside the | block.
 description: |
 
