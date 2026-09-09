@@ -48,15 +48,16 @@ module:
 kubernetes:
   min: "1.35"
   max: "1.35"
-# Cluster capabilities the lab needs (kebab-case), e.g. multi-node, storage.
-requires:
-  -
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
 # Tracks this lab may appear on. Play order is catalog.yaml, not this list.
 tracks:
   - beginner
   - cka
   - ckad
 # Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
 namespace:
 # Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
 startingClusterConfiguration: ""
@@ -73,16 +74,39 @@ objective: |
 concepts:
   -
 # Graded cluster state. Any legitimate kubectl path that reaches this state passes.
-# Allowed types: objectExists, fieldEquals, podReady, deploymentAvailable, containersHealthy, nodeTopology.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required.
 checks:
-  - type:
-    kind:
-    namespace:
-    name:
-  - type:
-    kind:
-    namespace:
-    name:
+  # - type: objectExists
+  #  kind:
+  #  namespace:
+  #  name:
+  # - type: fieldEquals
+  #   kind:
+  #   namespace:
+  #   name:
+  #   field:
+  #   value:
+  # - type: deploymentAvailable
+  #   namespace:
+  #   name:
+  #   replicas: 1
+  # - type: podReady
+  #   namespace:
+  #   selector:
+  # - type: containersHealthy
+  #   namespace:
+  #   selector:
+  # - type: nodeTopology
+  #   count:
+  #   controlPlanes:
+  #   workers:
 # Exactly three, in order: concept → what to inspect → one concrete command or next step.
 hints:
   -

@@ -91,12 +91,12 @@ Any `kubectl` path that produces the graded state passes.
 
 Types that run (unknown names fail lab validation):
 
-- `objectExists`
-- `fieldEquals`
-- `deploymentAvailable`
-- `podReady`
-- `containersHealthy`
-- `nodeTopology`
+- `objectExists` — `kind`, `namespace`, `name` (namespace is per-check, not inherited from the lab)
+- `fieldEquals` — those plus `field` and `value`
+- `deploymentAvailable` — `namespace`, `name`; optional `replicas` (minimum Available)
+- `podReady` — `namespace`, `selector` (label selector; `name` is ignored). Optional `replicas` is the minimum Ready count (default 1)
+- `containersHealthy` — `namespace`, `selector`
+- `nodeTopology` — `count`, `controlPlanes`, `workers`
 
 Hints must be exactly three: concept, what to inspect, then one concrete
 command or next step. The debrief should name the real mechanism and objects.
