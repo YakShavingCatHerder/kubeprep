@@ -8,7 +8,7 @@ const (
 	defaultFooterLines = 1
 	hintFooterLines    = 3
 	stackedScenarioCap = 12
-	scenarioInnerPad   = 1
+	paneInnerPad       = 2
 )
 
 // pane is a rectangular region in terminal cells.
@@ -42,7 +42,7 @@ func (p pane) Inset(n int) pane {
 
 // Content is the writable area inside the border and inner padding.
 func (p pane) Content() pane {
-	return p.Inner().Inset(scenarioInnerPad)
+	return p.Inner().Inset(paneInnerPad)
 }
 
 // splitLayout is the permanent scenario | lab-shell geometry.

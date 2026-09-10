@@ -85,7 +85,8 @@ reset:
 # Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
 # A line that is exactly ::page:: starts a new scenario-pane page. Keep it indented inside the | block.
 # Wrap copy-paste commands in ```kubectl fences (the pane adds a $; do not type it here).
-# Unlabeled / text / yaml fences indent as diagrams. Inline `code` highlights a token.
+# Vertical chains use ```diagram with one node per line and -> ; the pane draws the panel.
+# Other text / yaml fences stay indented. Inline `code` highlights a token.
 description: |
   This is your first Kubernetes lab.
 
@@ -104,7 +105,7 @@ description: |
 
   The important part is what `kubectl` does:
 
-  ```text
+  ```diagram
   you
     -> kubectl
     -> Kubernetes API
@@ -294,11 +295,11 @@ debrief:
 
     The most useful beginner mental model is:
 
-    ```text
+    ```diagram
     kubectl
-      -> sends a request to the Kubernetes API
-      -> receives a response
-      -> displays that response to you
+      -> Kubernetes API
+      -> response
+      -> you
     ```
 
     `kubectl` is not the cluster itself. Commands such as `get pods` do

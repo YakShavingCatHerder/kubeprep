@@ -88,7 +88,7 @@ func TestSplitScenarioCaptionReservesOneRow(t *testing.T) {
 	if inner.Width != 38 || inner.Height != 18 {
 		t.Fatalf("inner = %+v", inner)
 	}
-	if cap != 1 || story.Width != 36 || story.Height != 16 {
+	if cap != 1 || story.Width != 34 || story.Height != 15 {
 		t.Fatalf("caption=%d story=%+v", cap, story)
 	}
 }

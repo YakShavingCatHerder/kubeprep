@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"os"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -11,6 +12,12 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 )
+
+var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;?]*[a-zA-Z]`)
+
+func stripANSI(s string) string {
+	return ansiEscape.ReplaceAllString(s, "")
+}
 
 func TestScenarioViewRevealsHintsOneAtATime(t *testing.T) {
 	saved := 0
@@ -274,15 +281,35 @@ func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
 		status: "Lab Shell is attached.",
 		lab:    &memoryLab{view: "$ "},
 	}
-	view := model.View()
-	if !strings.Contains(view, "PadProbeTitle") {
-		t.Fatalf("title missing:\n%s", view)
+	plain := stripANSI(model.View())
+	if !strings.Contains(plain, "PadProbeTitle") {
+		t.Fatalf("title missing:\n%s", plain)
 	}
-	if !strings.Contains(view, "SCENARIO") {
-		t.Fatalf("scenario caption missing:\n%s", view)
+	if !strings.Contains(plain, "SCENARIO") {
+		t.Fatalf("scenario caption missing:\n%s", plain)
 	}
-	if strings.Contains(view, "│PadProbeTitle") || strings.Contains(view, "│OBJECTIVE") {
-		t.Fatalf("scenario text sits against the border:\n%s", view)
+	if strings.Contains(plain, "│OBJECTIVE") || strings.Contains(plain, "│ OBJECTIVE") {
+		t.Fatalf("scenario text sits against the border:\n%s", plain)
+	}
+	if !strings.Contains(plain, "│  OBJECTIVE") {
+		t.Fatalf("scenario text should sit two cells in from the border:\n%s", plain)
+	}
+	if strings.Contains(plain, "│SCENARIO") || strings.Contains(plain, "│ LAB SHELL") || strings.Contains(plain, "│LAB SHELL") {
+		t.Fatalf("pane captions sit against the border:\n%s", plain)
+	}
+	if strings.Contains(plain, "│$") || strings.Contains(plain, "│ $") {
+		t.Fatalf("lab shell prompt sits against the border:\n%s", plain)
+	}
+}
+
+func TestLabShellResizesToPaddedBody(t *testing.T) {
+	lab := &memoryLab{view: "$ "}
+	model := scenarioViewModel{lab: lab}
+	next, _ := model.Update(tea.WindowSizeMsg{Width: 120, Height: 40})
+	_ = next
+	_, _, body := scenarioPaneRegions(computeSplitLayout(120, 40, false, defaultFooterLines).Shell)
+	if lab.cols != body.Width || lab.rows != body.Height {
+		t.Fatalf("pty %dx%d, want padded body %dx%d", lab.cols, lab.rows, body.Width, body.Height)
 	}
 }
 
@@ -350,6 +377,26 @@ func TestScenarioAndShellTopBordersAlign(t *testing.T) {
 	}
 	if !aligned {
 		t.Fatalf("SCENARIO caption and LAB SHELL should share a row:\n%s", view)
+	}
+}
+
+func TestPaneBordersRecedeFromProse(t *testing.T) {
+	if paneBorderStyle.GetBorderTopForeground() == scenarioProseStyle.GetForeground() {
+		t.Fatal("pane border should be dimmer than prose")
+	}
+	model := scenarioViewModel{
+		width:  120,
+		height: 40,
+		scenario: ScenarioView{
+			Title:     "Meet kubectl",
+			Objective: "Explore the cluster.",
+		},
+		lab: &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	border := paneBorderStyle.Render("┌")
+	if !strings.Contains(view, border) && !strings.Contains(view, "38;5;238") && !strings.Contains(view, "38;2;") {
+		t.Fatalf("expected a muted pane border:\n%s", view)
 	}
 }
 

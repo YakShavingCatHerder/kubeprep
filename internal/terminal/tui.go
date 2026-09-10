@@ -137,8 +137,8 @@ func (m scenarioViewModel) startLabCmd() tea.Cmd {
 	}
 	return func() tea.Msg {
 		layout := computeSplitLayout(m.width, m.height, m.zoomed, m.footerHeight())
-		inner := layout.Shell.Inner()
-		if err := m.lab.Start(m.ctx, session, inner.Width, inner.Height); err != nil {
+		_, _, body := scenarioPaneRegions(layout.Shell)
+		if err := m.lab.Start(m.ctx, session, body.Width, body.Height); err != nil {
 			return labErrorMsg{err: err}
 		}
 		return labReadyMsg{}
@@ -197,8 +197,9 @@ func (m scenarioViewModel) applyLayout() {
 	if m.lab == nil {
 		return
 	}
-	inner := computeSplitLayout(m.width, m.height, m.zoomed, m.footerHeight()).Shell.Inner()
-	_ = m.lab.Resize(inner.Width, inner.Height)
+	layout := computeSplitLayout(m.width, m.height, m.zoomed, m.footerHeight())
+	_, _, body := scenarioPaneRegions(layout.Shell)
+	_ = m.lab.Resize(body.Width, body.Height)
 }
 
 func (m scenarioViewModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -527,24 +528,13 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 	page := clampStoryPage(m.storyPage, len(pages))
 	body := strings.Join(pages[page], "\n")
 	body = lipgloss.NewStyle().Width(story.Width).Height(story.Height).MaxWidth(story.Width).MaxHeight(story.Height).Render(body)
-	bodyHeight := inner.Height - captionHeight
-	if bodyHeight < 1 {
-		bodyHeight = 1
-	}
-	body = lipgloss.NewStyle().
-		Padding(0, scenarioInnerPad, scenarioInnerPad, scenarioInnerPad).
-		Width(inner.Width).
-		Height(bodyHeight).
-		MaxWidth(inner.Width).
-		MaxHeight(bodyHeight).
-		Render(body)
+	body = padPaneBody(body, inner, captionHeight)
 
 	content := body
 	if captionHeight > 0 {
 		content = scenarioPaneCaption(m.scenario.Title, inner.Width) + "\n" + body
 	}
-	return lipgloss.NewStyle().
-		Border(lipgloss.NormalBorder()).
+	return paneBorderStyle.
 		Width(inner.Width).
 		Height(inner.Height).
 		Render(content)
@@ -552,13 +542,7 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 
 func (m scenarioViewModel) shellPane(size pane) string {
 	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
-	inner := size.Inner()
-	if inner.Width < 1 {
-		inner.Width = 1
-	}
-	if inner.Height < 1 {
-		inner.Height = 1
-	}
+	inner, captionHeight, story := scenarioPaneRegions(size)
 	title := "LAB SHELL"
 	if m.zoomed {
 		title = "LAB SHELL · zoomed"
@@ -567,13 +551,13 @@ func (m scenarioViewModel) shellPane(size pane) string {
 	if m.lab != nil {
 		body = m.lab.View()
 	}
-	bodyHeight := inner.Height - 1
-	if bodyHeight < 1 {
-		bodyHeight = 1
+	body = lipgloss.NewStyle().Width(story.Width).Height(story.Height).MaxWidth(story.Width).MaxHeight(story.Height).Render(body)
+	body = padPaneBody(body, inner, captionHeight)
+	content := body
+	if captionHeight > 0 {
+		content = padPaneCaption(label.Render(fitCells(title, captionInnerWidth(inner.Width))), inner.Width) + "\n" + body
 	}
-	body = lipgloss.NewStyle().Width(inner.Width).Height(bodyHeight).MaxWidth(inner.Width).MaxHeight(bodyHeight).Render(body)
-	content := label.Render(title) + "\n" + body
-	return lipgloss.NewStyle().Border(lipgloss.NormalBorder()).Width(inner.Width).Height(inner.Height).Render(content)
+	return paneBorderStyle.Width(inner.Width).Height(inner.Height).Render(content)
 }
 
 func splitStoryBeats(story string) []string {

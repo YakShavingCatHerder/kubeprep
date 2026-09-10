@@ -53,8 +53,7 @@ func (r *ShellRunner) Command(ctx context.Context, session ShellSession) (*exec.
 		return nil, fmt.Errorf("resolve kubeprep executable: %w", err)
 	}
 
-	const prelude = `printf '\nKubePrep Lab Shell — %s\nIsolated kubeconfig is active. The scenario stays visible in the other pane.\n[?] hint  [F2] check  [F11] zoom  [F10] quit\n\n' "$KUBEPREP_SCENARIO"; exec "$KUBEPREP_SHELL"`
-	cmd := exec.CommandContext(ctx, "/bin/sh", "-c", prelude)
+	cmd := exec.CommandContext(ctx, shell)
 	env := map[string]string{
 		"TERM":                "xterm-256color",
 		"KUBECONFIG":          session.Kubeconfig,
