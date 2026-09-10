@@ -17,9 +17,9 @@ paths:
   - id: cka
     title: CKA
     sections:
-      - id: welcome
+      - id: deployments
         labs:
-          - kubectl-basics
+          - deployment-basics
   - id: ckad
     title: CKAD
     sections:
