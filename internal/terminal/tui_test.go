@@ -233,10 +233,8 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			Title:      "Test Scenario",
 			Objective:  "Inspect the cluster.",
 			Namespace:  "kubeprep-test",
-			Resource:   "cluster nodes",
 		},
 		storyBeats: []string{"The cluster is already running.\n```kubectl\nkubectl get nodes\n```"},
-		status:     "Lab Shell is attached. Press F2 to validate cluster state.",
 		lab:        &memoryLab{view: "$ "},
 	}
 	view := model.View()
@@ -252,6 +250,12 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 	}
 	if strings.Contains(view, "Kubernetes Scenario Runner") || strings.Contains(view, "MODULE ") {
 		t.Fatalf("window header should be quiet:\n%s", view)
+	}
+	if strings.Contains(view, "VALIDATION") || strings.Contains(view, "cluster nodes") {
+		t.Fatalf("scenario pane should not billboard the graded object:\n%s", view)
+	}
+	if strings.Contains(view, "Press F2 to validate") {
+		t.Fatalf("idle check prompt should stay in the footer:\n%s", view)
 	}
 	first := strings.SplitN(view, "\n", 2)[0]
 	if !strings.Contains(first, "Test Scenario") || !strings.Contains(first, "beginner") {
@@ -582,6 +586,53 @@ func TestUngradedLabFooterUsesContinue(t *testing.T) {
 	}
 	if strings.Contains(view, "[F2] check") {
 		t.Fatalf("ungraded footer still says check:\n%s", view)
+	}
+	if strings.Contains(view, "VALIDATION") || strings.Contains(view, "Press F2 when you are ready") {
+		t.Fatalf("ungraded lab still shows check copy in the scenario pane:\n%s", view)
+	}
+}
+
+func TestCheckFeedbackAppearsAfterResult(t *testing.T) {
+	model := scenarioViewModel{
+		width:  80,
+		height: 24,
+		scenario: ScenarioView{
+			Title:     "Create a Pod",
+			Objective: "Create Pod nginx.",
+		},
+		status:     "The target state has not been reached.",
+		diagnostic: "pod nginx does not exist",
+		state:      CheckWrong,
+		lab:        &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if strings.Contains(view, "VALIDATION") {
+		t.Fatalf("VALIDATION section should be gone:\n%s", view)
+	}
+	if !strings.Contains(view, "The target state has not been reached.") {
+		t.Fatalf("missing check status:\n%s", view)
+	}
+	if !strings.Contains(view, "pod nginx does not exist") {
+		t.Fatalf("missing diagnostic:\n%s", view)
+	}
+}
+
+func TestUngradedOmitsCheckFeedback(t *testing.T) {
+	model := scenarioViewModel{
+		width:  80,
+		height: 24,
+		scenario: ScenarioView{
+			Ungraded:  true,
+			Title:     "Meet kubectl",
+			Objective: "Explore the cluster.",
+		},
+		status:     "The target state has not been reached.",
+		diagnostic: "should not appear",
+		lab:        &memoryLab{view: "$ "},
+	}
+	view := model.View()
+	if strings.Contains(view, "The target state has not been reached.") || strings.Contains(view, "should not appear") {
+		t.Fatalf("ungraded lab showed check feedback:\n%s", view)
 	}
 }
 
