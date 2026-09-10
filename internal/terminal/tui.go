@@ -29,7 +29,6 @@ type ScenarioView struct {
 	Description         string
 	Objective           string
 	Namespace           string
-	Resource            string
 	Experience          string
 	Hints               []string
 	InitialHintLevel    int
@@ -67,10 +66,8 @@ func RunScenarioView(ctx context.Context, scenario ScenarioView) (SessionResult,
 	if hintLevel < 0 || hintLevel > len(scenario.Hints) {
 		hintLevel = 0
 	}
-	status := "Lab Shell is attached. Press F2 to validate cluster state."
-	if scenario.Ungraded {
-		status = "Lab Shell is attached. Press F2 when you are ready to continue."
-	} else if scenario.ObserveWhileRunning && scenario.ObserveDelay > 0 {
+	status := ""
+	if !scenario.Ungraded && scenario.ObserveWhileRunning && scenario.ObserveDelay > 0 {
 		status = waitingStatus(scenario.ObserveDelay)
 	}
 	model := scenarioViewModel{
@@ -475,20 +472,9 @@ func (m scenarioViewModel) scenarioBody() string {
 			body.WriteString(desc + "\n\n")
 		}
 		body.WriteString(scenarioSectionStyle.Render("OBJECTIVE") + "\n")
-		body.WriteString(m.scenario.Objective + "\n\n")
-		body.WriteString(scenarioSectionStyle.Render("VALIDATION") + "\n")
-		if m.scenario.Resource != "" {
-			body.WriteString(m.scenario.Resource + "\n")
-		}
-		if m.scenario.Namespace != "" {
-			body.WriteString(m.scenario.Namespace + "\n")
-		}
-		body.WriteString(m.status)
-		if m.diagnostic != "" {
-			body.WriteString("\n" + muted.Render(m.diagnostic))
-		}
-		if m.checking {
-			body.WriteString("\n" + muted.Render("Checking cluster state…"))
+		body.WriteString(m.scenario.Objective)
+		if feedback := m.checkFeedback(muted); feedback != "" {
+			body.WriteString("\n\n" + feedback)
 		}
 		if m.hintLevel > 0 && m.hintLevel <= len(m.scenario.Hints) {
 			body.WriteString("\n\n" + scenarioSectionStyle.Render(fmt.Sprintf("HINT %d", m.hintLevel)) + "\n")
@@ -499,6 +485,23 @@ func (m scenarioViewModel) scenarioBody() string {
 		body.WriteString("\n\n" + muted.Render(m.shellError.Error()))
 	}
 	return body.String()
+}
+
+func (m scenarioViewModel) checkFeedback(muted lipgloss.Style) string {
+	if m.scenario.Ungraded {
+		return ""
+	}
+	var lines []string
+	if status := strings.TrimSpace(m.status); status != "" {
+		lines = append(lines, status)
+	}
+	if m.diagnostic != "" {
+		lines = append(lines, muted.Render(m.diagnostic))
+	}
+	if m.checking {
+		lines = append(lines, muted.Render("Checking cluster state…"))
+	}
+	return strings.Join(lines, "\n")
 }
 
 func (m scenarioViewModel) scenarioPages() [][]string {

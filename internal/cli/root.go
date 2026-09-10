@@ -625,10 +625,6 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 	if err != nil {
 		return terminal.SessionResult{}, err
 	}
-	namespace, resource := scenarioTarget(scenario)
-	if scenario.Namespace != "" {
-		namespace = scenario.Namespace
-	}
 	observeDelay, err := curriculum.ParseObserveDelay(scenario.ObserveDelay)
 	if err != nil {
 		return terminal.SessionResult{}, err
@@ -651,8 +647,7 @@ func (a *app) runScenario(ctx context.Context, scenario *curriculum.Scenario, ma
 		Module:              scenario.Module,
 		Description:         strings.TrimSpace(scenario.Description),
 		Objective:           strings.TrimSpace(scenario.Objective),
-		Namespace:           namespace,
-		Resource:            resource,
+		Namespace:           scenario.Namespace,
 		Experience:          string(profile.Experience),
 		Hints:               scenario.Hints,
 		Completion:          strings.TrimSpace(scenario.Completion),
@@ -866,29 +861,6 @@ func scenarioResources(registry *curriculum.Registry, scenario *curriculum.Scena
 	return scenario.ComposeResources(resources, func(reference string) ([]byte, error) {
 		return registry.ReadManifest(scenario.ID, reference)
 	})
-}
-
-func scenarioTarget(scenario *curriculum.Scenario) (string, string) {
-	if len(scenario.Checks) == 0 {
-		return "", ""
-	}
-	check := scenario.Checks[0]
-	kind := check.Kind
-	if kind == "" {
-		switch check.Type {
-		case curriculum.CheckDeploymentAvailable:
-			kind = "deployment"
-		case curriculum.CheckPodReady:
-			kind = "pod"
-		case curriculum.CheckNodeTopology:
-			return "", "cluster nodes"
-		}
-	}
-	resource := kind
-	if check.Name != "" {
-		resource += "/" + check.Name
-	}
-	return check.Namespace, resource
 }
 
 func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, manager *cluster.Manager) (validator.Result, error) {
