@@ -24,16 +24,29 @@ directory.
 ### Release binary
 
 Download a Linux or macOS archive from
-[Releases](https://github.com/YakShavingCatHerder/kubeprep/releases). Unpack it
-and put `kubeprep` on your `PATH`. Docker must already be running.
+[Releases](https://github.com/YakShavingCatHerder/kubeprep/releases), or run:
 
 ```sh
-# Example: macOS Apple Silicon
-tar -xzf kubeprep_*_Darwin_arm64.tar.gz
-sudo mv kubeprep /usr/local/bin/
+curl -fsSL https://raw.githubusercontent.com/YakShavingCatHerder/kubeprep/main/scripts/install.sh | bash
 kubeprep --version
 kubeprep doctor
 kubeprep start --track=beginner
+```
+
+Archives are `kubeprep_<version>_darwin_arm64.tar.gz` (lowercase `darwin` /
+`linux`, and `amd64` / `arm64` — not `x86_64` or `aarch64`). The script verifies
+checksums and extracts into a temp directory. `PREFIX` and `--no-sudo` override
+the install path. Pin a tag with `KUBEPREP_VERSION=v0.1.1`.
+
+To unpack an archive by hand:
+
+```sh
+os=$(uname -s | tr '[:upper:]' '[:lower:]')
+arch=$(uname -m)
+case "$arch" in x86_64) arch=amd64 ;; aarch64|arm64) arch=arm64 ;; esac
+tmpdir=$(mktemp -d)
+tar -xzf kubeprep_*_${os}_${arch}.tar.gz -C "$tmpdir"
+sudo install -m 755 "$tmpdir/kubeprep" /usr/local/bin/kubeprep
 ```
 
 ### From source
