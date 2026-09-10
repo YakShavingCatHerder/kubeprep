@@ -61,3 +61,27 @@ func TestScopedEnvironmentPrependsToolBinDir(t *testing.T) {
 		t.Fatalf("PATH override missing %q in %v", want, cmd.Env)
 	}
 }
+
+func TestLabShellStartsWithoutABanner(t *testing.T) {
+	runner := &ShellRunner{
+		LookupEnv: func(key string) (string, bool) {
+			if key == "SHELL" {
+				return "/bin/zsh", true
+			}
+			return "", false
+		},
+		Environ:    func() []string { return nil },
+		Executable: func() (string, error) { return "/usr/local/bin/kubeprep", nil },
+	}
+	cmd, err := runner.Command(context.Background(), ShellSession{ScenarioID: "kubectl-basics"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cmd.Path != "/bin/zsh" && (len(cmd.Args) == 0 || cmd.Args[0] != "/bin/zsh") {
+		t.Fatalf("lab shell should start the user shell, got path=%q args=%v", cmd.Path, cmd.Args)
+	}
+	joined := strings.Join(cmd.Args, " ")
+	if strings.Contains(joined, "printf") || strings.Contains(joined, "Isolated kubeconfig") {
+		t.Fatalf("lab shell still prints a banner: %v", cmd.Args)
+	}
+}

@@ -27,8 +27,8 @@ func TestPaneContentInsetsBorderAndPadding(t *testing.T) {
 		t.Fatalf("Inner() = %+v", inner)
 	}
 	content := p.Content()
-	if content.Width != 36 || content.Height != 16 {
-		t.Fatalf("Content() = %+v, want 36x16", content)
+	if content.Width != 34 || content.Height != 14 {
+		t.Fatalf("Content() = %+v, want 34x14", content)
 	}
 }
 
