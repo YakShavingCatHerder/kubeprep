@@ -1,0 +1,718 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: deployments
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Create a Deployment and understand how its ReplicaSet maintains the requested number of Pods."
+    # The misconception the lab should break.
+    wrongIdea: "A Deployment is just another way to create a Pod, or the Deployment itself runs containers."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "A Deployment manages ReplicaSets, and a ReplicaSet maintains a desired number of matching Pods. Controllers continually compare desired state with observed state and act when they differ."
+    # Why this lab sits here on the playlist.
+    why: "The learner already understands Pods, manifests, labels, selectors, and desired versus observed state. This first CKA lab combines those ideas into a controller-managed workload."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "The namespace starts empty. Focus on Deployment, ReplicaSet, Pod ownership, replicas, Pod templates, and reconciliation. Scaling operations, rollouts, rollback, update strategies, and Deployment troubleshooting are deferred."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: apps/v1
+    kind: Deployment
+    metadata:
+      name: nginx
+      namespace: kubeprep-deployment-basics
+    spec:
+      replicas: 2
+      selector:
+        matchLabels:
+          app: nginx
+      template:
+        metadata:
+          labels:
+            app: nginx
+        spec:
+          containers:
+            - name: nginx
+              image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Create Deployment nginx with two replicas using nginx:1.27 and allow two replicas to become available."
+    - "Apply an equivalent Deployment manifest with a valid selector and matching Pod template labels."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Create only bare Pods or a ReplicaSet instead of Deployment nginx."
+    - "Create Deployment nginx with the wrong image, wrong replica count, or fewer than two available replicas."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Apply an apps/v1 Deployment manifest instead of using kubectl create deployment."
+
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: deployment-basics
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Create Your First Deployment
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module: deployments
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - cka
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-deployment-basics
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: ""
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+description: |
+  Until now, you have worked with bare
+  Pods.
+
+  A bare Pod exists because that Pod object
+  exists.
+
+  If you delete it, nothing says another
+  copy must take its place.
+
+  Long-running workloads usually need a
+  stronger guarantee.
+
+  Instead of saying:
+
+  ```text
+  run this Pod
+  ```
+
+  we want to say:
+
+  ```text
+  keep two copies running
+  ```
+
+  A Deployment lets us describe that
+  desired state.
+
+  ::page::
+
+  A Deployment adds controllers above the
+  Pod lifecycle you already know.
+
+  ```diagram
+  Deployment
+  ->
+  ReplicaSet
+  ->
+  Pods
+  ```
+
+  The Deployment manages a ReplicaSet.
+
+  The ReplicaSet maintains the requested
+  number of Pods.
+
+  The Pods still follow the familiar
+  runtime path.
+
+  ```diagram
+  Pod
+  ->
+  scheduler
+  ->
+  kubelet
+  ->
+  container runtime
+  ```
+
+  A Deployment does not run containers
+  itself.
+
+  ::page::
+
+  Create a Deployment named `nginx`.
+
+  Ask it to maintain two Pods using
+  `nginx:1.27`.
+
+  ```kubectl
+  kubectl create deployment nginx --image=nginx:1.27 --replicas=2
+  ```
+
+  You submitted one Deployment object.
+
+  Kubernetes now has desired state that
+  says two replicas should exist.
+
+  ::page::
+
+  Inspect the Deployment.
+
+  ```kubectl
+  kubectl get deployment nginx
+  ```
+
+  Pay attention to `READY`,
+  `UP-TO-DATE`, and `AVAILABLE`.
+
+  Once the workload settles, the
+  Deployment should report two available
+  replicas.
+
+  The Deployment is the object you created.
+
+  But it is not the only object that now
+  exists.
+
+  ::page::
+
+  Look for the ReplicaSet.
+
+  ```kubectl
+  kubectl get replicasets
+  ```
+
+  Its name begins with `nginx-`.
+
+  Now look at the Pods.
+
+  ```kubectl
+  kubectl get pods
+  ```
+
+  Two Pods should exist.
+
+  Their names begin with the ReplicaSet
+  name.
+
+  ```diagram
+  nginx Deployment
+  ->
+  nginx-<hash> ReplicaSet
+  ->
+  nginx-<hash>-<suffix> Pods
+  ```
+
+  You created one object.
+
+  Controllers created the lower-level
+  objects needed to satisfy it.
+
+  ::page::
+
+  Kubernetes records who controls a
+  managed object.
+
+  Choose the ReplicaSet name you just saw.
+
+  ```kubectl
+  kubectl describe replicaset <replicaset-name>
+  ```
+
+  Find `Controlled By`.
+
+  It should identify the `nginx`
+  Deployment.
+
+  Now choose one of the Pod names.
+
+  ```kubectl
+  kubectl describe pod <pod-name>
+  ```
+
+  Its `Controlled By` field should point
+  to the ReplicaSet.
+
+  Ownership forms a chain.
+
+  ```diagram
+  Deployment
+  ->
+  ReplicaSet
+  ->
+  Pod
+  ```
+
+  ::page::
+
+  Now inspect the Deployment as an API
+  object.
+
+  ```kubectl
+  kubectl get deployment nginx -o yaml
+  ```
+
+  Find the replica count.
+
+  ```yaml
+  spec:
+    replicas: 2
+  ```
+
+  That is desired state.
+
+  Now find the selector and Pod template.
+
+  ```yaml
+  selector:
+    matchLabels:
+      app: nginx
+
+  template:
+    metadata:
+      labels:
+        app: nginx
+  ```
+
+  The selector and template labels match.
+
+  This is where the labels and selectors
+  from the welcome labs become useful.
+
+  ::page::
+
+  Look farther into the Pod template.
+
+  ```yaml
+  template:
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  ```
+
+  This should look familiar.
+
+  It is a Pod specification nested inside
+  the Deployment.
+
+  The template is the blueprint for Pods
+  created for this workload.
+
+  ```diagram
+  Deployment spec
+  ->
+  Pod template
+  ->
+  created Pods
+  ```
+
+  The Deployment describes management.
+
+  The template describes the Pods.
+
+  ::page::
+
+  Now test why controllers matter.
+
+  List the Pods.
+
+  ```kubectl
+  kubectl get pods
+  ```
+
+  Choose one nginx Pod and delete it.
+
+  ```kubectl
+  kubectl delete pod <pod-name>
+  ```
+
+  Look at the Pods again.
+
+  ```kubectl
+  kubectl get pods
+  ```
+
+  You may briefly see a terminating Pod
+  and a new Pod starting.
+
+  After Kubernetes settles, there should
+  still be two Pods.
+
+  You deleted a Pod.
+
+  You did not create its replacement.
+
+  ::page::
+
+  The ReplicaSet still wanted two Pods.
+
+  For a moment, desired and observed state
+  were different.
+
+  ```text
+  desired: 2
+  observed: 1
+  ```
+
+  The controller detected that mismatch.
+
+  It created another Pod.
+
+  Eventually:
+
+  ```text
+  desired: 2
+  observed: 2
+  ```
+
+  This process is reconciliation.
+
+  ```diagram
+  desired state
+  ->
+  controller compares
+  ->
+  observed state
+  ->
+  corrective action
+  ```
+
+  Controllers repeat this process
+  continuously.
+
+  ::page::
+
+  Compare this with the bare Pod from the
+  welcome labs.
+
+  ```diagram
+  bare Pod deleted
+  ->
+  Pod object gone
+  ->
+  no replacement
+  ```
+
+  With a Deployment:
+
+  ```diagram
+  managed Pod deleted
+  ->
+  desired replicas still 2
+  ->
+  controller detects mismatch
+  ->
+  replacement Pod created
+  ```
+
+  The important difference is not how the
+  Pod was deleted.
+
+  It is whether a higher-level controller
+  still declares that a Pod should exist.
+
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  Deployment `nginx` exists with two
+  desired replicas using `nginx:1.27`.
+
+  At least two replicas are available.
+
+  The learner can identify the relationship
+  between the Deployment, its ReplicaSet,
+  and the Pods maintained by that
+  ReplicaSet.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - deployment
+  - replicaset
+  - pod
+  - controller
+  - reconciliation
+  - replicas
+  - owner-reference
+  - pod-template
+  - labels
+  - selectors
+  - desired-state
+  - observed-state
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
+checks:
+  - type: objectExists
+    kind: deployment
+    namespace: kubeprep-deployment-basics
+    name: nginx
+  - type: fieldEquals
+    kind: deployment
+    namespace: kubeprep-deployment-basics
+    name: nginx
+    field: spec.replicas
+    value: 2
+  - type: fieldEquals
+    kind: deployment
+    namespace: kubeprep-deployment-basics
+    name: nginx
+    field: spec.template.spec.containers[0].image
+    value: nginx:1.27
+  - type: deploymentAvailable
+    namespace: kubeprep-deployment-basics
+    name: nginx
+    replicas: 2
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - |
+    Think about the ownership chain.
+
+    ```diagram
+    Deployment
+    ->
+    ReplicaSet
+    ->
+    Pods
+    ```
+
+    The Deployment does not run containers
+    directly.
+  - |
+    Inspect the Deployment, ReplicaSet, and
+    Pods.
+
+    Compare the Deployment's desired
+    replicas with its available replicas.
+  - |
+    One valid way to create the workload
+    is:
+
+    ```kubectl
+    kubectl create deployment nginx --image=nginx:1.27 --replicas=2
+    ```
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  Deployment `nginx` requests two replicas
+  using `nginx:1.27`.
+
+  At least two replicas are available, and
+  the workload is maintained through a
+  ReplicaSet rather than as bare Pods.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
+  explanation: |
+    A Deployment changes the level where
+    you describe desired state.
+
+    With a bare Pod, you directly declare
+    that one Pod should exist.
+
+    With a Deployment, you declare how a
+    workload should be maintained.
+
+    ```diagram
+    Deployment
+    ->
+    ReplicaSet
+    ->
+    Pods
+    ```
+
+    Each object has a different job.
+
+    ::page::
+
+    The Deployment manages ReplicaSets.
+
+    The ReplicaSet maintains a desired
+    number of matching Pods.
+
+    The Pods are still scheduled onto Nodes.
+
+    kubelet still works with the container
+    runtime to run their containers.
+
+    Controllers did not replace the Pod
+    lifecycle.
+
+    They added desired state above it.
+
+    ::page::
+
+    The Deployment requested:
+
+    ```yaml
+    replicas: 2
+    ```
+
+    That value is desired state.
+
+    The cluster may temporarily contain
+    fewer Pods.
+
+    ```text
+    desired: 2
+    observed: 1
+    ```
+
+    A controller notices the difference
+    and acts.
+
+    This repeating process is
+    reconciliation.
+
+    ::page::
+
+    Deleting a managed Pod did not change
+    the Deployment's desired replica count.
+
+    The ReplicaSet still expected two Pods.
+
+    That is why another Pod appeared.
+
+    ```diagram
+    Pod deleted
+    ->
+    observed replicas drop
+    ->
+    ReplicaSet notices
+    ->
+    replacement Pod created
+    ```
+
+    A bare Pod has no ReplicaSet maintaining
+    another copy.
+
+    ::page::
+
+    Ownership tells you where workload
+    intent comes from.
+
+    ```diagram
+    Deployment
+    ->
+    ReplicaSet
+    ->
+    Pod
+    ```
+
+    A Pod owned by a ReplicaSet is not an
+    isolated object.
+
+    If a managed Pod is wrong, changing
+    only that Pod may not fix the real
+    source of the desired state.
+
+    Ask:
+
+    ```text
+    What owns this object?
+    ```
+
+    That question becomes increasingly
+    important during CKA troubleshooting.
+
+    ::page::
+
+    Labels and selectors connect the
+    controller to its Pods.
+
+    ```yaml
+    selector:
+      matchLabels:
+        app: nginx
+
+    template:
+      metadata:
+        labels:
+          app: nginx
+    ```
+
+    The selector describes the set of Pods
+    the workload expects to manage.
+
+    The Pod template creates Pods with
+    matching labels.
+
+    This is why labels and selectors were
+    taught before Deployments.
+
+    ::page::
+
+    The Pod template is a blueprint.
+
+    ```yaml
+    template:
+      spec:
+        containers:
+          - name: nginx
+            image: nginx:1.27
+    ```
+
+    You already know the structure inside
+    it from working with bare Pods.
+
+    The new idea is that a controller can
+    repeatedly create Pods from that
+    template.
+
+    ::page::
+
+    Your operational model now has several
+    layers.
+
+    ```diagram
+    Deployment
+    ->
+    ReplicaSet
+    ->
+    Pod
+    ->
+    scheduler
+    ->
+    kubelet
+    ->
+    container runtime
+    ```
+
+    When something looks wrong, identify
+    which layer owns the state you are
+    trying to change.
+
+    That shift from individual objects to
+    controller-managed desired state is a
+    core Kubernetes operating skill.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl create deployment nginx --image=nginx:1.27 --replicas=2
+    - kubectl get deployment nginx
+    - kubectl get replicasets
+    - kubectl get pods
+    - kubectl describe deployment nginx
+    - kubectl get deployment nginx -o yaml
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - Deployment
+    - ReplicaSet
+    - Controller ownership
+    - Reconciliation
+    - Pod templates
+    - Desired versus observed state
+  # One-line domain label.
+  domain: Deployments and controller reconciliation
