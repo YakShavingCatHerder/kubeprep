@@ -21,6 +21,24 @@ const (
 )
 
 func reservedActionFor(msg tea.KeyMsg, prefix bool, prompting bool) (reservedAction, bool) {
+	if prefix {
+		switch msg.String() {
+		case "h", "?":
+			return actionHint, true
+		case "c":
+			return actionCheck, true
+		case "z":
+			return actionZoom, true
+		case "q":
+			return actionQuit, true
+		case "k", "p", "left", "up", "pgup":
+			return actionPagePrev, true
+		case "j", "n", "right", "down", "pgdown":
+			return actionPageNext, true
+		default:
+			return actionNone, true
+		}
+	}
 	if prompting {
 		switch strings.ToLower(msg.String()) {
 		case "y", "enter":
@@ -56,26 +74,16 @@ func reservedActionFor(msg tea.KeyMsg, prefix bool, prompting bool) (reservedAct
 		return actionZoom, true
 	case tea.KeyCtrlG:
 		return actionPrefix, true
+	case tea.KeyRight, tea.KeyDown, tea.KeyPgDown:
+		if msg.Alt {
+			return actionPageNext, true
+		}
+	case tea.KeyLeft, tea.KeyUp, tea.KeyPgUp:
+		if msg.Alt {
+			return actionPagePrev, true
+		}
 	}
-	if !prefix {
-		return actionNone, false
-	}
-	switch msg.String() {
-	case "h", "?":
-		return actionHint, true
-	case "c":
-		return actionCheck, true
-	case "z":
-		return actionZoom, true
-	case "q":
-		return actionQuit, true
-	case "k", "p", "left", "up", "pgup":
-		return actionPagePrev, true
-	case "j", "n", "right", "down", "pgdown":
-		return actionPageNext, true
-	default:
-		return actionNone, true
-	}
+	return actionNone, false
 }
 
 func encodeKey(msg tea.KeyMsg) []byte {

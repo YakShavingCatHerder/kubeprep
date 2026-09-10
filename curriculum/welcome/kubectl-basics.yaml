@@ -1,6 +1,4 @@
-# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
-# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
-
+# kubectl-basics lab
 authoring:
   # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
   section: welcome
