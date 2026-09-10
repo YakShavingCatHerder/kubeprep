@@ -541,7 +541,6 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 }
 
 func (m scenarioViewModel) shellPane(size pane) string {
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
 	inner, captionHeight, story := scenarioPaneRegions(size)
 	title := "LAB SHELL"
 	if m.zoomed {
@@ -555,7 +554,7 @@ func (m scenarioViewModel) shellPane(size pane) string {
 	body = padPaneBody(body, inner, captionHeight)
 	content := body
 	if captionHeight > 0 {
-		content = padPaneCaption(label.Render(fitCells(title, captionInnerWidth(inner.Width))), inner.Width) + "\n" + body
+		content = paneCaption(title, inner.Width) + "\n" + body
 	}
 	return paneBorderStyle.Width(inner.Width).Height(inner.Height).Render(content)
 }

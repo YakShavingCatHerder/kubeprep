@@ -9,6 +9,7 @@ const (
 	hintFooterLines    = 3
 	stackedScenarioCap = 12
 	paneInnerPad       = 2
+	paneCaptionPad     = 1
 )
 
 // pane is a rectangular region in terminal cells.

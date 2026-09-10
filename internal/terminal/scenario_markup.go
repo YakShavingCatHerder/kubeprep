@@ -33,6 +33,8 @@ var (
 	paneBorderStyle    = lipgloss.NewStyle().
 				Border(lipgloss.NormalBorder()).
 				BorderForeground(lipgloss.Color("238"))
+	// Pane titles: dim chrome, tucked toward the frame so they recede.
+	paneCaptionStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("241"))
 )
 
 func isCommandFence(lang string) bool {

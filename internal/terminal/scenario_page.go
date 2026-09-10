@@ -130,12 +130,15 @@ func scenarioPaneRegions(size pane) (inner pane, captionHeight int, story pane) 
 }
 
 func scenarioPaneCaption(width int) string {
-	label := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110"))
-	return padPaneCaption(label.Render(fitCells("SCENARIO", captionInnerWidth(width))), width)
+	return paneCaption("SCENARIO", width)
+}
+
+func paneCaption(text string, width int) string {
+	return padPaneCaption(paneCaptionStyle.Render(fitCells(text, captionInnerWidth(width))), width)
 }
 
 func captionInnerWidth(width int) int {
-	inner := width - 2*paneInnerPad
+	inner := width - 2*paneCaptionPad
 	if inner < 1 {
 		return 1
 	}
@@ -147,7 +150,7 @@ func padPaneCaption(text string, width int) string {
 		width = 1
 	}
 	return lipgloss.NewStyle().
-		Padding(0, paneInnerPad).
+		Padding(0, paneCaptionPad).
 		Width(width).
 		MaxWidth(width).
 		Render(text)

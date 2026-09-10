@@ -300,8 +300,14 @@ func TestScenarioPanePadsTextFromTheBorder(t *testing.T) {
 	if !strings.Contains(plain, "│  OBJECTIVE") {
 		t.Fatalf("scenario text should sit two cells in from the border:\n%s", plain)
 	}
-	if strings.Contains(plain, "│SCENARIO") || strings.Contains(plain, "│ LAB SHELL") || strings.Contains(plain, "│LAB SHELL") {
+	if strings.Contains(plain, "│SCENARIO") || strings.Contains(plain, "│LAB SHELL") {
 		t.Fatalf("pane captions sit against the border:\n%s", plain)
+	}
+	if !strings.Contains(plain, "│ SCENARIO") || !strings.Contains(plain, "│ LAB SHELL") {
+		t.Fatalf("pane captions should sit one cell in from the border:\n%s", plain)
+	}
+	if strings.Contains(plain, "│  SCENARIO") || strings.Contains(plain, "│  LAB SHELL") {
+		t.Fatalf("pane captions should sit closer to the border than the body:\n%s", plain)
 	}
 	if strings.Contains(plain, "│$") || strings.Contains(plain, "│ $") {
 		t.Fatalf("lab shell prompt sits against the border:\n%s", plain)
@@ -343,9 +349,23 @@ func TestScenarioSectionLabelsRecedeBelowKeywords(t *testing.T) {
 	if !strings.Contains(view, scenarioInlineStyle.Render("READY")) {
 		t.Fatalf("inline keywords should stay bright:\n%s", view)
 	}
-	caption := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("LAB SHELL")
-	if !strings.Contains(view, caption) || !strings.Contains(view, lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("SCENARIO")) {
-		t.Fatalf("pane captions should stay cyan:\n%s", view)
+	if !strings.Contains(view, paneCaptionStyle.Render("LAB SHELL")) || !strings.Contains(view, paneCaptionStyle.Render("SCENARIO")) {
+		t.Fatalf("pane captions should use the chrome style:\n%s", view)
+	}
+}
+
+func TestPaneCaptionsStandApartFromProse(t *testing.T) {
+	if paneCaptionStyle.Render("SCENARIO") == scenarioProseStyle.Render("SCENARIO") {
+		t.Fatal("pane captions should not match prose")
+	}
+	if paneCaptionStyle.Render("SCENARIO") == scenarioInlineStyle.Render("SCENARIO") {
+		t.Fatal("pane captions should not share the keyword color")
+	}
+	if paneCaptionStyle.Render("SCENARIO") == scenarioSectionStyle.Render("SCENARIO") {
+		t.Fatal("pane captions should not match body section labels")
+	}
+	if paneCaptionStyle.GetForeground() == scenarioProseStyle.GetForeground() {
+		t.Fatal("pane captions should be dimmer than prose")
 	}
 }
 
