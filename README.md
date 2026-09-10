@@ -1,46 +1,49 @@
 # KubePrep
 
-KubePrep is a terminal app for practicing Kubernetes on a dedicated local
-[`kind`](https://kind.sigs.k8s.io/) cluster. You type real `kubectl` in a real
-shell. It grades the cluster that results, not the commands you used.
+Practice [Kubernetes](https://kubernetes.io/) in a split terminal: the scenario
+stays on one side, a real Lab Shell on the other, against a dedicated
+[`kind`](https://kind.sigs.k8s.io/) cluster. It grades cluster state, not the
+commands you typed.
 
-This is early. Beginner ships two welcome labs:
-[Meet kubectl](curriculum/welcome/kubectl-basics.yaml) then
-[First API Object](curriculum/welcome/pod-creation.yaml). CKA and CKAD currently
-play the orientation lab. There is no `exam` command and no `--pack` flag.
+[![CI](https://github.com/YakShavingCatHerder/kubeprep/actions/workflows/ci.yml/badge.svg)](https://github.com/YakShavingCatHerder/kubeprep/actions/workflows/ci.yml)
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
 
-![Split TUI: scenario pane with a typed command beside a real Lab Shell](docs/demo.gif)
+Status: early. There is no `exam` command and no `--pack` flag.
 
-## Requirements
+![Split TUI: scenario pane beside a real Lab Shell](docs/demo.gif)
 
-- macOS or Linux (amd64 or arm64)
-- Docker, or another daemon `kind` can use
+## Quick start
 
-`kubeprep doctor` installs pinned `kind` and `kubectl` (Kubernetes 1.35) into
-the KubePrep config directory.
+Requires macOS or Linux (amd64 or arm64) and
+[Docker](https://docs.docker.com/get-docker/) (or another daemon `kind` can
+use). `kubeprep doctor` installs pinned `kind` and
+[`kubectl`](https://kubernetes.io/docs/reference/kubectl/)
+([Kubernetes](https://kubernetes.io/releases/) 1.35) into the KubePrep config
+directory.
 
-## Install
+### Release binary
 
-Tagged releases publish Linux and macOS binaries (amd64 and arm64) from
-[YakShavingCatHerder/kubeprep](https://github.com/YakShavingCatHerder/kubeprep).
-Unpack the archive and put `kubeprep` on your `PATH`. Docker must already be
-running.
+Download a Linux or macOS archive from
+[Releases](https://github.com/YakShavingCatHerder/kubeprep/releases). Unpack it
+and put `kubeprep` on your `PATH`. Docker must already be running.
 
 ```sh
 # Example: macOS Apple Silicon
 tar -xzf kubeprep_*_Darwin_arm64.tar.gz
 sudo mv kubeprep /usr/local/bin/
 kubeprep --version
+kubeprep doctor
+kubeprep start --track=beginner
 ```
 
-## Build from source
+### From source
 
-Go 1.27 or newer (same as CI):
+[Go](https://go.dev/dl/) 1.27 or newer (same as CI):
 
 ```sh
 make install
 kubeprep doctor
-kubeprep start
+kubeprep start --track=beginner
 ```
 
 `make install` writes `./bin/kubeprep` and copies it to `$(go env GOPATH)/bin`
@@ -50,58 +53,79 @@ kubeprep start
 ## Train
 
 ```sh
-kubeprep doctor   # install kind/kubectl; check OS, Docker, and the config dir
-kubeprep start    # create the cluster if needed; open the current lab
+kubeprep doctor          # kind, kubectl, OS, Docker, config dir
+kubeprep start           # create the cluster if needed; open the current lab
+kubeprep status          # track, current lab, completion
+kubeprep reset           # restore the current lab only
+kubeprep destroy         # delete the kind cluster; keep progress
+kubeprep destroy --all   # cluster and learner progress
 ```
 
-First start asks for a track unless you pass `--track=beginner`, `--track=cka`,
-or `--track=ckad`.
+First `start` asks for a track unless you pass `--track=beginner`,
+`--track=cka`, or `--track=ckad`. `start` uses the curriculum compiled into the
+binary; YAML on disk does not change it until you `make install`.
 
-`start` splits the terminal: scenario on one side, Lab Shell on the other, with
-a session-only `KUBECONFIG` for the KubePrep cluster. If the track has another
-incomplete lab, you can continue to it.
+The session is a split view with a dedicated `KUBECONFIG` for the KubePrep
+cluster. Ungraded labs use `F2` to continue; graded labs use `F2` to check
+cluster state.
 
 | Key | Action |
 | --- | --- |
-| `?` or `F1` | hint (use `?` if the editor steals `F1`) |
-| `F2` | check cluster state |
+| `?` or `F1` | hint (`?` if the editor steals `F1`) |
+| `F2` | check cluster state, or continue on an ungraded lab |
 | `F11` | zoom the Lab Shell |
 | `Alt+←` / `Alt+→` | previous / next scenario page (or `Ctrl+G` then `p`/`n`) |
 | `F10` | leave |
 
-```sh
-kubeprep              # help
-kubeprep status       # track, current lab, completion, cluster
-kubeprep reset        # restore the current lab only
-kubeprep destroy      # delete the kind cluster; keep progress
-kubeprep destroy --all  # cluster and learner progress
-```
-
 `reset` and `destroy` ask for confirmation. Scripts must pass `--force`.
 
-`start` uses the curriculum compiled into the binary. YAML on disk does not
-change `start` until you `make install`.
+### Curriculum
+
+Play order lives in [`curriculum/catalog.yaml`](curriculum/catalog.yaml).
+Beginner currently runs the welcome pack:
+
+| Lab | File |
+| --- | --- |
+| meet kubectl | [`kubectl-basics.yaml`](curriculum/welcome/kubectl-basics.yaml) |
+| create your first pod | [`pod-creation.yaml`](curriculum/welcome/pod-creation.yaml) |
+| inspect a running pod | [`pod-inspection.yaml`](curriculum/welcome/pod-inspection.yaml) |
+| run commands inside a pod | [`pod-exec.yaml`](curriculum/welcome/pod-exec.yaml) |
+| create a pod from yaml | [`manifest-basics.yaml`](curriculum/welcome/manifest-basics.yaml) |
+| Review the Kubernetes Foundations | [`welcome-summary.yaml`](curriculum/welcome/welcome-summary.yaml) |
+
+[CKA](https://training.linuxfoundation.org/certification/certified-kubernetes-administrator-cka/)
+and
+[CKAD](https://training.linuxfoundation.org/certification/certified-kubernetes-application-developer-ckad/)
+tracks currently start with meet kubectl.
 
 ## Author a lab
 
 `lab try` and `lab publish` need a checkout of this repo and a file in
-`contribute/`. A release binary has no contribute directory.
+[`contribute/`](contribute/). A release binary has no contribute directory.
 
 ```sh
-kubeprep lab try test-lab.yaml      # validate and run; does not write curriculum/
-kubeprep lab publish test-lab.yaml  # copy into curriculum/ and catalog.yaml
-kubeprep lab validate               # check ./curriculum (or a directory)
+kubeprep lab try test-lab.yaml       # validate and run; does not write curriculum/
+kubeprep lab publish test-lab.yaml   # install into curriculum/ and catalog.yaml
+kubeprep lab validate                # check ./curriculum
 ```
 
-Details: [contribute/README.md](contribute/README.md).
+See [`contribute/README.md`](contribute/README.md).
 
 ## Safety
 
 KubePrep writes its own kubeconfig under your OS user config directory. Before
 it mutates or destroys a cluster it checks API server, CA fingerprint, cluster
 name, and an ownership marker. It never grades shell history. The Lab Shell is
-your real shell, not a sandbox.
+your real shell, not a sandbox. Details:
+[`docs/SECURITY.md`](docs/SECURITY.md).
 
-## Contributing
+## Docs
 
-[CONTRIBUTING.md](docs/CONTRIBUTING.md) · [SECURITY.md](docs/SECURITY.md)
+- [`docs/architecture.md`](docs/architecture.md) — packages and pack load
+- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — engine and lab workflow
+- [`docs/SECURITY.md`](docs/SECURITY.md) — trust boundaries
+- [`contribute/README.md`](contribute/README.md) — authoring labs
+
+## License
+
+[Apache License 2.0](LICENSE)

@@ -1,6 +1,3 @@
-# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
-# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
-
 authoring:
   # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
   section:
@@ -70,7 +67,8 @@ reset:
 # A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
 # Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
 # Wrap copy-paste commands in ```kubectl fences (the pane adds a $; do not type it here).
-# Unlabeled / text / yaml fences indent as diagrams.
+# Vertical chains use ```diagram (one node per line, -> between them).
+# Glosses and one-line shapes use ```text. YAML samples use ```yaml.
 # Inline `code` highlights a token in a sentence. Keep fences indented inside the | block.
 description: |
 

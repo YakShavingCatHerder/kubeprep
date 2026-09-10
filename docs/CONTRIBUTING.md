@@ -16,7 +16,8 @@ real Lab Shell. Do not assume the TUI suspends into a fake shell.
 ## Labs
 
 See [`contribute/README.md`](../contribute/README.md). Start from
-[`example-module.yaml`](../contribute/example-module.yaml).
+[`example-module.yaml`](../contribute/example-module.yaml). Engine overview:
+[`architecture.md`](architecture.md).
 
 `make validate-lab` checks `curriculum/` (or `CURRICULUM=<directory>` with a
 `catalog.yaml`). Lab ids must be unique in that directory.

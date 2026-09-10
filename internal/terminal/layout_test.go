@@ -87,6 +87,18 @@ func TestReservedKeysAreNotForwardedToTheShell(t *testing.T) {
 	if reserved {
 		t.Fatal("y should be typed into the lab shell before completion")
 	}
+	action, reserved = reservedActionFor(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}, false, true)
+	if !reserved || action != actionQuit {
+		t.Fatal("plain n should stay/quit when the next-scenario prompt is active")
+	}
+	action, reserved = reservedActionFor(tea.KeyMsg{Type: tea.KeyRunes, Runes: []rune{'n'}}, true, true)
+	if !reserved || action != actionPageNext {
+		t.Fatal("prefix n should still page during the next-scenario prompt")
+	}
+	action, reserved = reservedActionFor(tea.KeyMsg{Type: tea.KeyRight, Alt: true}, false, true)
+	if !reserved || action != actionPageNext {
+		t.Fatal("Alt+Right should still page during the next-scenario prompt")
+	}
 }
 
 func TestEncodeKeySendsEnterAndCtrlCToThePTY(t *testing.T) {
