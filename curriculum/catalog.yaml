@@ -12,6 +12,7 @@ paths:
           - pod-creation
           - pod-inspection
           - pod-exec
+          - manifest-basics
   - id: cka
     title: CKA
     sections:
