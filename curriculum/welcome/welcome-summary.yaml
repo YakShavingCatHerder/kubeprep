@@ -1,0 +1,650 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: welcome
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Connect the introductory Kubernetes skills into one mental model the learner can carry into controller-based workloads and CKA preparation."
+    # The misconception the lab should break.
+    wrongIdea: "The introductory labs were a collection of unrelated kubectl commands to memorize."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "Kubernetes is an API-driven desired-state system. kubectl reads and writes API objects, Kubernetes components act on their specs, status reports observed state, and operators use several views to understand the difference."
+    # Why this lab sits here on the playlist.
+    why: "This closes the introductory learning path before the learner begins controller-based workloads. It compresses the earlier labs into reusable mental models rather than introducing another Kubernetes feature."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "This lab is intentionally ungraded and introduces no new Kubernetes mechanism. A familiar nginx Pod is supplied only as a reference object. The learner may inspect it, but the primary goal is recall and synthesis before moving into Deployments and CKA-oriented operation."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+      namespace: kubeprep-welcome-summary
+      labels:
+        app: web
+        env: dev
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Review or inspect the supplied nginx Pod without changing it."
+    - "Use any read-only kubectl commands that help reinforce the earlier lessons."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Treat the review as a requirement to create, edit, patch, or delete resources."
+    - "Introduce controller behavior, Services, storage, scheduling constraints, or other concepts that belong after the welcome curriculum."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Complete the conceptual review without running every example command; the lab is intended to reinforce mental models rather than command sequence."
+
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: welcome-summary
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Review the Kubernetes Foundations
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module: welcome
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-welcome-summary
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: |
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+    namespace: kubeprep-welcome-summary
+    labels:
+      app: web
+      env: dev
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.27
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+description: |
+  You now know enough Kubernetes to stop
+  treating kubectl as a collection of
+  unrelated commands.
+
+  The pieces fit together.
+
+  Start with the most important idea:
+
+  ```text
+  you
+    |
+    v
+  kubectl
+    |
+    v
+  API server
+    |
+    v
+  Kubernetes
+  ```
+
+  kubectl is a client.
+
+  It lets you ask the Kubernetes API for
+  information and submit changes to it.
+
+  That simple model explains most of what
+  you have done so far.
+
+  ::page::
+
+  Kubernetes manages API objects.
+
+  You have already worked with a Pod.
+
+  Whether you created it with an imperative
+  command or YAML, Kubernetes ultimately
+  received an object.
+
+  A manifest made that structure visible:
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.27
+  ```
+
+  Remember the four questions:
+
+  `apiVersion`
+
+  Which API defines this object?
+
+  `kind`
+
+  What type of object is it?
+
+  `metadata`
+
+  Which object is this?
+
+  `spec`
+
+  What do I want Kubernetes to make true?
+
+  ::page::
+
+  Creating the Pod only described the
+  desired state.
+
+  Kubernetes still had work to do.
+
+  ```text
+  Pod submitted
+       |
+       v
+  API server
+       |
+       v
+  scheduler
+       |
+       v
+  kubelet
+       |
+       v
+  container runtime
+  ```
+
+  The scheduler chose a Node.
+
+  kubelet on that Node acted on the
+  assignment.
+
+  The container runtime started the
+  requested container.
+
+  Kubernetes then reported what happened.
+
+  This gives you a mental model you will
+  use throughout the course:
+
+  ```text
+  spec
+    -> desired state
+
+  status
+    -> observed state
+  ```
+
+  ::page::
+
+  You also learned that no single kubectl
+  view answers every question.
+
+  Start broad.
+
+  ```kubectl
+  kubectl get pod nginx
+  ```
+
+  This answers:
+
+  What is its high-level state?
+
+  Ask for more placement information:
+
+  ```kubectl
+  kubectl get pod nginx -o wide
+  ```
+
+  This helps answer:
+
+  Where is it running?
+
+  Ask Kubernetes for detailed context:
+
+  ```kubectl
+  kubectl describe pod nginx
+  ```
+
+  This helps answer:
+
+  What happened around this object?
+
+  Look especially at Events.
+
+  ::page::
+
+  When you need the complete API object,
+  ask for YAML.
+
+  ```kubectl
+  kubectl get pod nginx -o yaml
+  ```
+
+  This is where `spec` and `status` become
+  especially useful.
+
+  When you need application output, change
+  perspectives.
+
+  ```kubectl
+  kubectl logs nginx
+  ```
+
+  Kubernetes may say the container is
+  running.
+
+  The logs tell you what the application
+  itself is saying.
+
+  These are different sources of evidence.
+
+  ::page::
+
+  Sometimes inspecting from outside is not
+  enough.
+
+  You learned to start a process inside an
+  existing container:
+
+  ```kubectl
+  kubectl exec nginx -- nginx -v
+  ```
+
+  `exec` does not SSH into the Node.
+
+  It does not create another Pod.
+
+  It starts another process inside the
+  existing container.
+
+  That gives you two perspectives:
+
+  ```text
+  Outside the container
+
+    get
+    describe
+    YAML
+    logs
+
+  Inside the container
+
+    exec
+  ```
+
+  Troubleshooting will eventually combine
+  both.
+
+  ::page::
+
+  You also stopped relying only on
+  imperative creation.
+
+  A YAML manifest describes an API object
+  before it is submitted.
+
+  ```kubectl
+  kubectl apply -f pod.yaml
+  ```
+
+  The manifest is not a script.
+
+  It describes desired state.
+
+  kubectl reads that description and sends
+  the represented object to the API server.
+
+  If you forget the structure of an object,
+  ask Kubernetes.
+
+  ```kubectl
+  kubectl explain pod.spec.containers
+  ```
+
+  You do not need to memorize the entire
+  Kubernetes API.
+
+  You need to know how to explore it.
+
+  ::page::
+
+  Names identify individual objects.
+
+  Labels give objects searchable metadata.
+
+  The supplied `nginx` Pod has labels such
+  as:
+
+  ```yaml
+  labels:
+    app: web
+    env: dev
+  ```
+
+  A selector lets you ask for objects with
+  matching labels.
+
+  ```kubectl
+  kubectl get pods -l app=web
+  ```
+
+  Keep this distinction:
+
+  ```text
+  name
+    -> one specific object
+
+  labels
+    -> metadata on objects
+
+  selector
+    -> find a matching set
+  ```
+
+  This becomes important immediately after
+  the welcome curriculum.
+
+  Controllers and Services use labels and
+  selectors to work with groups of Pods.
+
+  ::page::
+
+  You are now ready for a change in how the
+  labs will feel.
+
+  So far, the course has explained the
+  pieces before asking much from you.
+
+  The next stage will increasingly ask:
+
+  What state should exist?
+
+  What state exists now?
+
+  Which Kubernetes object is responsible?
+
+  What should you inspect or change?
+
+  The commands will still matter.
+
+  But the goal is no longer memorizing
+  kubectl syntax.
+
+  The goal is understanding Kubernetes well
+  enough to reason about the cluster.
+
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  Review the Kubernetes mental models from
+  the welcome curriculum.
+
+  Be able to connect kubectl, API objects,
+  manifests, desired and observed state,
+  Pod inspection, exec, labels, and
+  selectors into one operational model.
+
+  Leave the supplied `nginx` Pod unchanged.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - kubectl
+  - api-object
+  - manifest
+  - pod
+  - desired-state
+  - observed-state
+  - pod-inspection
+  - kubectl-exec
+  - labels
+  - selectors
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
+ungraded: true
+checks: []
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - |
+    Think in relationships rather than
+    commands: kubectl talks to the API,
+    `spec` describes desired state, and
+    `status` reports observed state.
+  - |
+    Use the supplied `nginx` Pod if you
+    want a concrete object for reviewing
+    metadata, spec, status, labels, Events,
+    logs, and placement.
+  - |
+    Start with the familiar summary:
+
+    ```kubectl
+    kubectl get pod nginx
+    ```
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  You have reviewed the core Kubernetes
+  models introduced in the welcome
+  curriculum.
+
+  The next labs build on these concepts
+  rather than introducing Kubernetes from
+  scratch.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
+  explanation: |
+    The welcome curriculum introduced many
+    commands, but the commands were not the
+    main lesson.
+
+    The main lesson was the system behind
+    them.
+
+    ```text
+    kubectl
+       |
+       v
+    API server
+       |
+       v
+    API objects
+    ```
+
+    Kubernetes exposes an API.
+
+    kubectl is one client for that API.
+
+    Resources such as Pods are represented
+    as API objects.
+
+    ::page::
+
+    Those objects express desired state.
+
+    ```text
+    spec
+      -> what should be true
+
+    status
+      -> what is observed
+    ```
+
+    Kubernetes components work between
+    those two ideas.
+
+    For a Pod:
+
+    ```text
+    API server
+        |
+        v
+    scheduler
+        |
+        v
+    kubelet
+        |
+        v
+    container runtime
+    ```
+
+    The object describes the request.
+
+    Kubernetes components make the request
+    real.
+
+    ::page::
+
+    Inspection is about gathering evidence.
+
+    ```text
+    get
+      -> quick state
+
+    wide
+      -> placement and extra context
+
+    describe
+      -> details and Events
+
+    YAML
+      -> complete API object
+
+    logs
+      -> application output
+
+    exec
+      -> process inside the container
+    ```
+
+    You should not reach for every command
+    every time.
+
+    Ask a question first.
+
+    Then choose the view that can answer it.
+
+    ::page::
+
+    Manifests gave you another view of the
+    same API model.
+
+    ```text
+    YAML
+      -> serialized API object
+      -> submitted through kubectl
+      -> validated by API server
+    ```
+
+    `apiVersion`, `kind`, `metadata`, and
+    `spec` are not arbitrary YAML headings.
+
+    They describe the Kubernetes object.
+
+    ::page::
+
+    Labels and selectors changed how you
+    identify resources.
+
+    ```text
+    object name
+      -> one object
+
+    label
+      -> metadata
+
+    selector
+      -> matching objects
+    ```
+
+    That relationship is about to become
+    much more important.
+
+    A Deployment will create and manage a
+    set of Pods rather than one bare Pod.
+
+    To understand how those objects relate,
+    you need the API, manifest, Pod, and
+    selector concepts you already learned.
+
+    ::page::
+
+    This is the foundation to carry into
+    the next stage:
+
+    ```text
+    What should exist?
+      -> desired state
+
+    What exists now?
+      -> observed state
+
+    What object owns that state?
+      -> resource relationships
+
+    Why are they different?
+      -> inspect evidence
+
+    How should I correct it?
+      -> change desired state
+    ```
+
+    That is the shift from learning basic
+    Kubernetes vocabulary to operating a
+    Kubernetes cluster.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl get pod nginx
+    - kubectl describe pod nginx
+    - kubectl get pod nginx -o yaml
+    - kubectl logs nginx
+    - kubectl exec nginx -- nginx -v
+    - kubectl explain pod.spec.containers
+    - kubectl get pods -l app=web
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - kubectl and the Kubernetes API
+    - API objects and manifests
+    - Desired state versus observed state
+    - Pod lifecycle
+    - External and internal inspection
+    - Labels and selectors
+  # One-line domain label.
+  domain: Welcome curriculum review
