@@ -1,0 +1,603 @@
+# Copy, rename, and fill. authoring is notes for humans/agents: not shown, not graded, not applied.
+# Everything below authoring is the loadable Scenario. The runner grades checks (cluster state), never commands.
+
+authoring:
+  # Domain folder and catalog section: welcome, api, pods, jobs, deployments, scheduling, storage, services, network-policy, rbac, troubleshooting.
+  section: welcome
+  # How much help this lab should give: guided | assisted | operator | exam.
+  guidance: guided
+  intent:
+    # One skill or relationship this lab proves that is relevant to the learning path and objective.
+    teach: "Author a Kubernetes API object as YAML and submit that manifest to the API server."
+    # The misconception the lab should break.
+    wrongIdea: "Kubernetes YAML is special configuration syntax separate from the API object, or kubectl apply somehow interprets instructions for how to start a container."
+    # Accurate mechanism in one or two sentences.
+    mentalModel: "A manifest is a serialized description of a Kubernetes API object. kubectl reads the manifest and sends the represented object to the API server, where fields such as apiVersion, kind, metadata, and spec determine what object and desired state are being requested."
+    # Why this lab sits here on the playlist.
+    why: "The learner has already created a Pod imperatively and inspected the same kind of object as YAML. This lab reverses that relationship: instead of Kubernetes showing the learner an object as YAML, the learner authors the object as YAML and submits it."
+    # In/out of scope, start-state rationale, anything reviewers should not treat as a second objective.
+    notes: "The workspace namespace is already selected so namespace authoring remains out of scope. Labels, selectors, multi-object manifests, controllers, and advanced apply behavior are deferred. The lab grades the resulting Pod state, not whether apply, create -f, or another valid path produced it."
+  # Healthy/target objects for reviewers. Never applied. Pass/fail is checks only.
+  desiredClusterConfiguration: |
+    apiVersion: v1
+    kind: Pod
+    metadata:
+      name: nginx
+      namespace: kubeprep-manifest-basics
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+  # Legitimate paths that produce the same graded state (run, create -f, apply -f, edit, patch, …).
+  accept:
+    - "Author a Pod manifest and submit it with kubectl apply -f or kubectl create -f."
+    - "Reach the same Pod state through another valid kubectl path, including imperative creation."
+  # Near-misses that must fail: wrong kind, namespace, image, or incomplete observed state.
+  reject:
+    - "Create a resource other than a Pod named nginx, or create the Pod outside the configured workspace."
+    - "Create Pod nginx with an image other than nginx:1.27 or submit invalid YAML that creates no target object."
+  # One alternate valid path, to prove the grader is not locked to a single command.
+  proveAlternate: "Create the same nginx Pod imperatively instead of applying pod.yaml and confirm that the resulting graded state is identical."
+
+apiVersion: kubeprep.io/v1alpha1
+# Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
+id: manifest-basics
+# Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
+title: Create a Pod from YAML
+# Only challenge is valid. Broken/incomplete start; reset restores that same start.
+mode: challenge
+# Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
+# observeDelay: 60s
+# 1 = first write in a section; 5 = mixed troubleshooting.
+difficulty: 1
+# Curriculum month this lab targets: YYYY-MM.
+revision: 2026-09
+# Must match authoring.section and the catalog section that lists this id.
+module: welcome
+kubernetes:
+  min: "1.35"
+  max: "1.35"
+# Cluster capabilities the lab needs. Empty is valid. Do not leave a blank "- " item.
+# Example: multi-node, storage.
+requires: []
+# Tracks this lab may appear on. Play order is catalog.yaml, not this list.
+tracks:
+  - beginner
+# Workspace Namespace. Must be kubeprep-*. Created on start; wiped and recreated on reset.
+# Checks do not inherit this; repeat namespace (or selector) on each check.
+namespace: kubeprep-manifest-basics
+# Inline YAML applied on setup and reset. Empty = namespace only. Prefer a broken or missing object, not a healthy cluster.
+startingClusterConfiguration: ""
+# Extra manifests beside this file, applied after the start blob. Use the same list on reset.
+setup:
+  manifests: []
+reset:
+  manifests: []
+# Learner-facing context: what they already saw, the real mechanism, and that any valid kubectl path works.
+# A line that is exactly ::page:: starts a new scenario-pane page (optional surrounding whitespace is fine).
+# Keep it indented inside the | block; a flush-left ::page:: splits the string across multiple panes.
+description: |
+  You have already seen a Pod from two
+  directions.
+
+  First, you created `nginx` with an
+  imperative kubectl command.
+
+  Later, you asked Kubernetes to show that
+  Pod as YAML.
+
+  Now we are going to reverse the process.
+
+  You will write the YAML first.
+
+  That YAML is called a manifest.
+
+  A manifest is not a script telling
+  Kubernetes which steps to perform.
+
+  It describes a Kubernetes API object and
+  the state you want that object to have.
+
+  ```text
+  YAML manifest
+       |
+       v
+    kubectl
+       |
+       v
+  API server
+       |
+       v
+  Kubernetes object
+  ```
+
+  ::page::
+
+  Most Kubernetes manifests begin with the
+  same basic pieces:
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+  spec:
+    ...
+  ```
+
+  Read those fields as questions.
+
+  `apiVersion`
+
+  Which Kubernetes API version describes
+  this object?
+
+  `kind`
+
+  What type of object is this?
+
+  `metadata`
+
+  What identifies or describes this
+  particular object?
+
+  `spec`
+
+  What desired state are you requesting?
+
+  The contents of `spec` depend on the
+  resource kind.
+
+  A Pod spec does not look the same as a
+  Deployment or Service spec.
+
+  ::page::
+
+  You do not need to memorize every field.
+
+  kubectl can ask the Kubernetes API for
+  information about a resource schema.
+
+  Start with the Pod:
+
+  ```kubectl
+  kubectl explain pod
+  ```
+
+  Look through the available fields.
+
+  Now ask specifically about `spec`:
+
+  ```kubectl
+  kubectl explain pod.spec
+  ```
+
+  Go one level deeper:
+
+  ```kubectl
+  kubectl explain pod.spec.containers
+  ```
+
+  `kubectl explain` becomes useful whenever
+  you remember the object you need but not
+  the exact YAML structure.
+
+  ::page::
+
+  Create a file named `pod.yaml` in the Lab
+  Shell.
+
+  Give it this content:
+
+  ```yaml
+  apiVersion: v1
+  kind: Pod
+  metadata:
+    name: nginx
+  spec:
+    containers:
+      - name: nginx
+        image: nginx:1.27
+  ```
+
+  Notice the indentation.
+
+  `containers` is a list inside `spec`.
+
+  The dash begins one item in that list.
+
+  That container has its own `name` and
+  `image`.
+
+  Also notice that the manifest does not
+  specify a namespace.
+
+  Your lab workspace already selected the
+  correct namespace for you.
+
+  Namespace management will come later.
+
+  ::page::
+
+  You now have a file that describes the
+  object you want Kubernetes to create.
+
+  Submit it:
+
+  ```kubectl
+  kubectl apply -f pod.yaml
+  ```
+
+  `-f` tells kubectl to read the object
+  definition from a file.
+
+  kubectl reads the manifest and sends the
+  represented object to the Kubernetes API.
+
+  The API server then handles that Pod just
+  like the Pod you created earlier with
+  `kubectl run`.
+
+  The creation method changed.
+
+  The Kubernetes object did not.
+
+  ::page::
+
+  Check the result:
+
+  ```kubectl
+  kubectl get pod nginx
+  ```
+
+  You should now have a Pod named `nginx`.
+
+  Ask Kubernetes to show the stored object
+  as YAML:
+
+  ```kubectl
+  kubectl get pod nginx -o yaml
+  ```
+
+  Find the fields you originally wrote.
+
+  Look for `apiVersion`, `kind`, `metadata`,
+  and `spec`.
+
+  Then notice something important.
+
+  The object returned by Kubernetes
+  contains much more than your file.
+
+  Kubernetes added information while
+  processing and running the Pod.
+
+  In particular, you should see `status`.
+
+  You authored the desired state.
+
+  Kubernetes supplied the observed state.
+
+  ::page::
+
+  Compare the two directions you now know.
+
+  Earlier:
+
+  ```text
+  kubectl run
+       |
+       v
+  Pod API object
+  ```
+
+  Now:
+
+  ```text
+  pod.yaml
+       |
+       v
+  kubectl apply
+       |
+       v
+  Pod API object
+  ```
+
+  Both can result in the same kind of
+  Kubernetes object.
+
+  This is why understanding the API object
+  matters more than memorizing one command
+  that creates it.
+
+  From this point forward, manifests will
+  become an increasingly important way to
+  describe Kubernetes state.
+
+# Measurable target state: names, namespace, fields, and observed conditions. Not a command recipe.
+objective: |
+  A Pod named `nginx` exists in the current
+  workspace.
+
+  Its container image is `nginx:1.27`.
+
+  The learner can identify `apiVersion`,
+  `kind`, `metadata`, and `spec` as the
+  basic parts of the authored Pod object.
+# kebab-case tags (not used for scoring today).
+concepts:
+  - manifest
+  - yaml
+  - api-object
+  - api-version
+  - kind
+  - metadata
+  - spec
+  - desired-state
+  - kubectl-apply
+  - kubectl-explain
+# Graded cluster state. Any legitimate kubectl path that reaches this state passes.
+# Allowed types and required fields:
+#   objectExists: kind, namespace, name
+#   fieldEquals: kind, namespace, name, field, value
+#   deploymentAvailable: namespace, name; optional replicas (min Available)
+#   podReady / containersHealthy: namespace, selector (label selector; name is ignored)
+#     podReady may set replicas for min Ready pods (default 1)
+#   nodeTopology: count, controlPlanes, workers
+# Uncomment the types you need. At least one check is required unless ungraded: true.
+#ungraded: false
+checks:
+  - type: objectExists
+    kind: pod
+    namespace: kubeprep-manifest-basics
+    name: nginx
+  - type: fieldEquals
+    kind: pod
+    namespace: kubeprep-manifest-basics
+    name: nginx
+    field: spec.containers[0].image
+    value: nginx:1.27
+# Exactly three, in order: concept → what to inspect → one concrete command or next step.
+hints:
+  - "A Pod manifest describes an API object. Start with `apiVersion`, `kind`, `metadata`, and `spec`, then describe the container inside the Pod spec."
+  - "Use `kubectl explain pod` and `kubectl explain pod.spec.containers` if you are unsure where the container name or image belongs."
+  - "After saving the manifest as `pod.yaml`, submit it with `kubectl apply -f pod.yaml`."
+# Short confirmation of the proven state. No cheerleading.
+completion: |
+  Pod `nginx` exists with `nginx:1.27` as
+  its requested container image.
+
+  The object was described as Kubernetes
+  API data before being submitted.
+debrief:
+  # Real mechanism: who persisted the object, who scheduled it, what Ready actually is. Name the resources.
+  # ::page:: works here too, same as description.
+  explanation: |
+    YAML is only the representation you
+    used to describe the Kubernetes object.
+
+    The important concept is the object
+    itself.
+
+    ```text
+    apiVersion
+    kind
+    metadata
+    spec
+       |
+       v
+    API object
+    ```
+
+    kubectl reads that representation and
+    sends the request to the API server.
+
+    The API server validates the object and
+    persists the desired cluster state.
+
+    ::page::
+
+    `apiVersion` and `kind` work together.
+
+    `kind` says what resource you want.
+
+    In this lab:
+
+    ```yaml
+    kind: Pod
+    ```
+
+    `apiVersion` tells Kubernetes which API
+    version defines that resource.
+
+    For this Pod:
+
+    ```yaml
+    apiVersion: v1
+    ```
+
+    Later resources may use different API
+    groups and versions.
+
+    A Deployment, for example, will not use
+    the same `apiVersion` as this Pod.
+
+    You do not need to memorize them all.
+
+    ::page::
+
+    `metadata` describes this particular
+    object.
+
+    Here, the important field was:
+
+    ```yaml
+    metadata:
+      name: nginx
+    ```
+
+    The name identifies this Pod within its
+    namespace.
+
+    metadata can contain more than a name.
+
+    In the next lab, you will use metadata
+    to attach labels to objects.
+
+    Those labels will let you identify
+    groups of resources instead of only one
+    resource by name.
+
+    ::page::
+
+    `spec` describes desired state.
+
+    For this Pod, part of that desired state
+    was:
+
+    ```yaml
+    spec:
+      containers:
+        - name: nginx
+          image: nginx:1.27
+    ```
+
+    You asked Kubernetes for a Pod
+    containing an nginx container using
+    that image.
+
+    Kubernetes then used the same workload
+    lifecycle you learned earlier:
+
+    ```text
+    API server
+        |
+        v
+    scheduler
+        |
+        v
+    kubelet
+        |
+        v
+    container runtime
+    ```
+
+    The manifest did not perform those
+    steps.
+
+    It described the desired object that
+    caused Kubernetes to perform them.
+
+    ::page::
+
+    You did not write `status` into
+    `pod.yaml`.
+
+    Kubernetes produced it later.
+
+    That reinforces the distinction from
+    the Pod inspection lab:
+
+    ```text
+    spec
+      -> desired state
+
+    status
+      -> observed state
+    ```
+
+    You describe what should be true.
+
+    Kubernetes reports what it observes
+    while trying to make it true.
+
+    ::page::
+
+    `kubectl apply` reads an object
+    definition from the file supplied with
+    `-f`.
+
+    If the object does not exist, apply can
+    create it.
+
+    If a managed object already exists,
+    apply can also be used to reconcile
+    configuration changes.
+
+    You will use that behavior more in
+    later labs.
+
+    `kubectl create -f` can also create an
+    object from a manifest.
+
+    The important lesson here is not which
+    creation command you prefer.
+
+    Both operate on Kubernetes API objects.
+
+    ::page::
+
+    `kubectl explain` is your built-in
+    guide to those objects.
+
+    When you forget a field, ask Kubernetes.
+
+    ```kubectl
+    kubectl explain pod
+    ```
+
+    Then move deeper into the structure:
+
+    ```kubectl
+    kubectl explain pod.spec
+    ```
+
+    ```kubectl
+    kubectl explain pod.spec.containers
+    ```
+
+    This is a better habit than trying to
+    memorize every field in every resource.
+
+    ::page::
+
+    Your progression now looks like this:
+
+    ```text
+    kubectl
+      -> talk to Kubernetes
+
+    Pod creation
+      -> create desired state
+
+    Pod inspection
+      -> inspect observed state
+
+    exec
+      -> inspect inside a container
+
+    manifests
+      -> author API objects directly
+    ```
+
+    Next, you will build on `metadata`.
+
+    Instead of identifying only one object
+    by name, you will learn how labels and
+    selectors identify groups of objects.
+  # Commands worth remembering after success.
+  commands:
+    - kubectl explain pod
+    - kubectl explain pod.spec.containers
+    - kubectl apply -f pod.yaml
+    - kubectl get pod nginx -o yaml
+  # Human-readable names for the debrief pane (may differ from concepts:).
+  concepts:
+    - Kubernetes manifests
+    - apiVersion and kind
+    - metadata
+    - spec and desired state
+    - kubectl apply
+    - kubectl explain
+  # One-line domain label.
+  domain: Kubernetes API objects and manifests
