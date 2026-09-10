@@ -5,7 +5,8 @@
 #   KUBEPREP_VERSION=v0.1.1 bash scripts/install.sh
 #   PREFIX=$HOME/.local/bin bash scripts/install.sh --no-sudo
 #
-# Requires bash (3.2+), curl, tar, and sha256sum or shasum.
+# Requires bash (3.2+), curl, tar, and sha256sum (Linux) or shasum (macOS).
+# Login shell may be zsh; still invoke this file with bash, never zsh.
 # Archives are kubeprep_<version>_<os>_<arch>.tar.gz with lowercase os
 # (darwin|linux) and Go arch (amd64|arm64), matching GoReleaser.
 

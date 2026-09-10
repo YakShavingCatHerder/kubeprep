@@ -23,8 +23,9 @@ directory.
 
 ### Release binary
 
-Download a Linux or macOS archive from
-[Releases](https://github.com/YakShavingCatHerder/kubeprep/releases), or run:
+bash and zsh download the **same** archive for a given machine. The installer
+is a bash script; run it with bash even if your login shell is zsh. Do not
+pipe it to zsh.
 
 ```sh
 curl -fsSL https://raw.githubusercontent.com/YakShavingCatHerder/kubeprep/main/scripts/install.sh | bash
@@ -33,12 +34,23 @@ kubeprep doctor
 kubeprep start --track=beginner
 ```
 
-Archives are `kubeprep_<version>_darwin_arm64.tar.gz` (lowercase `darwin` /
-`linux`, and `amd64` / `arm64` — not `x86_64` or `aarch64`). The script verifies
-checksums and extracts into a temp directory. `PREFIX` and `--no-sudo` override
-the install path. Pin a tag with `KUBEPREP_VERSION=v0.1.1`.
+`PREFIX` and `--no-sudo` override the install path. Pin a tag with
+`KUBEPREP_VERSION=v0.1.1`. The script maps `uname`, verifies `checksums.txt`,
+and extracts into a temp directory.
 
-To unpack an archive by hand:
+macOS vs Linux **does** change the file you download from
+[Releases](https://github.com/YakShavingCatHerder/kubeprep/releases). Names are
+lowercase. `uname -m` of `x86_64` or `aarch64` is **not** the archive arch:
+
+| Host | Archive |
+| --- | --- |
+| macOS Apple Silicon (`arm64`) | `kubeprep_<version>_darwin_arm64.tar.gz` |
+| macOS Intel (`x86_64`) | `kubeprep_<version>_darwin_amd64.tar.gz` |
+| Linux x86_64 | `kubeprep_<version>_linux_amd64.tar.gz` |
+| Linux ARM (`aarch64` or `arm64`) | `kubeprep_<version>_linux_arm64.tar.gz` |
+
+Unpack by hand into a temp directory (the archive also contains `LICENSE` and
+`README.md`). Checksums: `shasum -a 256` on macOS, `sha256sum` on Linux.
 
 ```sh
 os=$(uname -s | tr '[:upper:]' '[:lower:]')
