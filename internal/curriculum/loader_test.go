@@ -12,21 +12,18 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
+func TestCoreRegistryMatchesPackInvariants(t *testing.T) {
 	registry, err := NewRegistry()
 	if err != nil {
 		t.Fatal(err)
 	}
 	ids := registry.ScenarioIDs()
-	if strings.Join(ids, ",") != "kubectl-basics,pod-creation" {
-		t.Fatalf("scenario order = %v", ids)
+	if len(ids) == 0 {
+		t.Fatal("embedded pack has no labs")
 	}
-	scenario, err := registry.LoadScenario("pod-creation")
-	if err != nil {
-		t.Fatal(err)
-	}
-	if scenario.Checks[0].Type != CheckObjectExists {
-		t.Fatalf("first check = %q", scenario.Checks[0].Type)
+	beginner := registry.PlayOrder("beginner")
+	if len(beginner) == 0 || beginner[0] != "kubectl-basics" {
+		t.Fatalf("PlayOrder(beginner) = %v, want kubectl-basics first", beginner)
 	}
 	welcome, err := registry.LoadScenario("kubectl-basics")
 	if err != nil {
@@ -35,12 +32,34 @@ func TestCoreRegistryLoadsShippedScenarios(t *testing.T) {
 	if welcome.Module != "welcome" || !welcome.Ungraded {
 		t.Fatalf("kubectl-basics module=%q ungraded=%v", welcome.Module, welcome.Ungraded)
 	}
-	if got := strings.Join(registry.PlayOrder("beginner"), ","); got != "kubectl-basics,pod-creation" {
-		t.Fatalf("PlayOrder(beginner) = %s", got)
+	graded := 0
+	for _, id := range ids {
+		lab, loadErr := registry.LoadScenario(id)
+		if loadErr != nil {
+			t.Fatalf("LoadScenario(%q): %v", id, loadErr)
+		}
+		if lab.Ungraded {
+			continue
+		}
+		graded++
+		if len(lab.Checks) == 0 {
+			t.Fatalf("%s is graded but has no checks", id)
+		}
 	}
-	for _, pathID := range []string{"cka", "ckad"} {
-		if got := strings.Join(registry.PlayOrder(pathID), ","); got != "kubectl-basics" {
-			t.Fatalf("PlayOrder(%q) = %s, want kubectl-basics", pathID, got)
+	if graded == 0 {
+		t.Fatal("embedded pack has no graded lab")
+	}
+	for _, catalog := range registry.Catalogs() {
+		for _, learningPath := range catalog.Paths {
+			order := registry.PlayOrder(learningPath.ID)
+			if len(order) == 0 {
+				t.Fatalf("PlayOrder(%q) is empty", learningPath.ID)
+			}
+			for _, id := range order {
+				if _, loadErr := registry.LoadScenario(id); loadErr != nil {
+					t.Fatalf("PlayOrder(%q) id %q: %v", learningPath.ID, id, loadErr)
+				}
+			}
 		}
 	}
 }

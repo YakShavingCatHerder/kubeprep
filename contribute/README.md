@@ -67,9 +67,9 @@ Missing `./curriculum` is an error. Does not rebuild the binary.
 `start` still uses the last `make install`. Publish again to refresh the
 on-disk pack; rebuild when you want `start` to include the lab.
 
-The shipped `pod-creation` lab has an integration test under
-`tests/integration`. New published labs should prove setup, incomplete start,
-accepted target state, and reset. That is not a `lab publish` gate yet.
+Kind integration (`tests/integration`) proves the runner honors lab YAML
+keys on a fixture, not a specific shipped lab. `lab validate` is the
+publish-time gate for schema, catalog paths, and manifest safety.
 
 ## Validate
 
