@@ -250,7 +250,7 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 			t.Fatalf("line %d width = %d, want <= 80: %q", lineNumber+1, width, line)
 		}
 	}
-	for _, text := range []string{"SCENARIO", "Test Scenario", "beginner", "LAB SHELL", "F2", "hint"} {
+	for _, text := range []string{"SCENARIO", "Test Scenario", "LAB SHELL", "F2", "hint"} {
 		if !strings.Contains(view, text) {
 			t.Fatalf("view does not contain %q", text)
 		}
@@ -264,9 +264,15 @@ func TestScenarioViewFitsEightyColumns(t *testing.T) {
 	if strings.Contains(view, "Press F2 to validate") {
 		t.Fatalf("idle check prompt should stay in the footer:\n%s", view)
 	}
-	first := strings.SplitN(view, "\n", 2)[0]
-	if !strings.Contains(first, "Test Scenario") || !strings.Contains(first, "beginner") {
-		t.Fatalf("header should be title · track, got %q", first)
+	first := stripANSI(strings.SplitN(view, "\n", 2)[0])
+	if !strings.Contains(first, "pods · Test Scenario") {
+		t.Fatalf("header should be module · lab name, got %q", first)
+	}
+	if strings.Contains(first, "beginner") {
+		t.Fatalf("header should not repeat the track, got %q", first)
+	}
+	if strings.Contains(view, "SCENARIO ·") {
+		t.Fatalf("scenario caption should not repeat the lab title:\n%s", view)
 	}
 }
 
@@ -338,7 +344,7 @@ func TestScenarioSectionLabelsRecedeBelowKeywords(t *testing.T) {
 		t.Fatalf("inline keywords should stay bright:\n%s", view)
 	}
 	caption := lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("LAB SHELL")
-	if !strings.Contains(view, caption) || !strings.Contains(view, "SCENARIO ·") {
+	if !strings.Contains(view, caption) || !strings.Contains(view, lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("110")).Render("SCENARIO")) {
 		t.Fatalf("pane captions should stay cyan:\n%s", view)
 	}
 }
@@ -370,7 +376,7 @@ func TestScenarioAndShellTopBordersAlign(t *testing.T) {
 	}
 	aligned := false
 	for _, line := range strings.Split(view, "\n") {
-		if strings.Contains(line, "LAB SHELL") && strings.Contains(line, "SCENARIO ·") {
+		if strings.Contains(line, "LAB SHELL") && strings.Contains(line, "SCENARIO") {
 			aligned = true
 			break
 		}

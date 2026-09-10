@@ -426,11 +426,11 @@ func (m scenarioViewModel) headerText() string {
 		title = strings.TrimSpace(m.scenario.ScenarioID)
 	}
 	var parts []string
+	if module := strings.TrimSpace(m.scenario.Module); module != "" {
+		parts = append(parts, module)
+	}
 	if title != "" {
 		parts = append(parts, title)
-	}
-	if track := strings.TrimSpace(m.scenario.Experience); track != "" {
-		parts = append(parts, track)
 	}
 	if !m.zoomed {
 		pages := m.scenarioPages()
@@ -532,7 +532,7 @@ func (m scenarioViewModel) scenarioPane(size pane) string {
 
 	content := body
 	if captionHeight > 0 {
-		content = scenarioPaneCaption(m.scenario.Title, inner.Width) + "\n" + body
+		content = scenarioPaneCaption(inner.Width) + "\n" + body
 	}
 	return paneBorderStyle.
 		Width(inner.Width).

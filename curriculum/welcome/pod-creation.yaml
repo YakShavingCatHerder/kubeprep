@@ -45,7 +45,7 @@ apiVersion: kubeprep.io/v1alpha1
 # Stable kebab-case id. Published file is {section}/{id}.yaml (pods/pod-creation.yaml).
 id: pod-creation
 # Short learner-facing title. Name the task, not the concept under assessment, unless this lab is instructional.
-title: Create Your First Pod
+title: create your first pod
 # Only challenge is valid. Broken/incomplete start; reset restores that same start.
 mode: challenge
 # Optional pause before the first auto-check (Go duration, max 10m). Omit unless the cluster needs time to settle.
