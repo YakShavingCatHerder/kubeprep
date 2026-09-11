@@ -246,7 +246,7 @@ func (a *app) labPublishCommand() *cobra.Command {
 func (a *app) labValidateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate [directory]",
-		Short: "Validate labs in a curriculum directory",
+		Short: "Validate labs within curriculum/",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := liveCurriculumDir
@@ -461,7 +461,7 @@ func (a *app) resetCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := a.confirm(cmd, yes, fmt.Sprintf("Reset %s to its starting state?", scenario.Title)); err != nil {
+			if err := a.confirm(cmd, yes, fmt.Sprintf("Reset %s lab to its starting state?", scenario.Title)); err != nil {
 				return err
 			}
 			manager, err := a.clusterManager()
@@ -479,7 +479,7 @@ func (a *app) resetCommand() *cobra.Command {
 			if err := store.ResetScenarioProgress(scenario.ID); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s reset. Run kubeprep start to continue.\n", scenario.Title)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s lab reset. Run kubeprep start to continue.\n", scenario.Title)
 			return nil
 		},
 	}
