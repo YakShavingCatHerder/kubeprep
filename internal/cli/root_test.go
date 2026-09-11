@@ -97,6 +97,69 @@ func TestRootUsesNeutralCommands(t *testing.T) {
 	}
 }
 
+func TestDestroyAllIsASubcommand(t *testing.T) {
+	a := &app{in: strings.NewReader(""), out: &bytes.Buffer{}, err: &bytes.Buffer{}}
+	root := a.rootCommand()
+	cmd, args, err := root.Find([]string{"destroy", "all"})
+	if err != nil {
+		t.Fatalf("find destroy all: %v", err)
+	}
+	if cmd.Name() != "all" {
+		t.Fatalf("destroy all resolved to %q", cmd.Name())
+	}
+	if len(args) != 0 {
+		t.Fatalf("destroy all leftover args = %v", args)
+	}
+	if cmd.InheritedFlags().Lookup("yes") == nil && cmd.Flags().Lookup("yes") == nil {
+		t.Fatal("destroy all is missing -y")
+	}
+}
+
+func TestDestroyHelpListsAllActionAndYesFlag(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"destroy", "--help"})
+	if err := root.ExecuteContext(context.Background()); err != nil {
+		t.Fatalf("destroy --help: %v", err)
+	}
+	got := output.String()
+	if !strings.Contains(got, "  all ") {
+		t.Fatalf("destroy help missing all action:\n%s", got)
+	}
+	if !strings.Contains(got, "-y, --yes") {
+		t.Fatalf("destroy help missing -y:\n%s", got)
+	}
+	if strings.Contains(got, "--all") {
+		t.Fatalf("destroy help still lists --all:\n%s", got)
+	}
+	if strings.Contains(got, "--force") {
+		t.Fatalf("destroy help still lists --force:\n%s", got)
+	}
+}
+
+func TestDestroyAllFlagRedirectsToAction(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"destroy", "--all"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "kubeprep destroy all") {
+		t.Fatalf("destroy --all error = %v, want a destroy all redirect", err)
+	}
+}
+
+func TestDestroyAllRequiresYesWhenNonInteractive(t *testing.T) {
+	var output bytes.Buffer
+	a := &app{in: strings.NewReader(""), out: &output, err: &output}
+	root := a.rootCommand()
+	root.SetArgs([]string{"destroy", "all"})
+	err := root.ExecuteContext(context.Background())
+	if err == nil || !strings.Contains(err.Error(), "-y") {
+		t.Fatalf("destroy all error = %v, want a -y requirement", err)
+	}
+}
+
 func TestRootReportsVersion(t *testing.T) {
 	previous := Version
 	Version = "test-0.1.0"
