@@ -54,6 +54,16 @@ func TestDoctorReportsActionableCommandFailure(t *testing.T) {
 	if docker.Detail == "" || docker.Remediation == "" {
 		t.Fatalf("Docker failure is not actionable: %#v", docker)
 	}
+	if docker.Checking != "checking docker daemon" || docker.Status != "docker daemon is not reachable" {
+		t.Fatalf("Docker copy = %#v", docker)
+	}
+}
+
+func TestSummarizeDockerInfoUsesServerVersion(t *testing.T) {
+	got := summarizeDockerInfo("Client:\n Version: 28.0.0\nServer Version: 28.1.1\nContainers: 3\n")
+	if got != "Server Version: 28.1.1" {
+		t.Fatalf("summarizeDockerInfo = %q", got)
+	}
 }
 
 func TestDoctorReportsPendingToolInstall(t *testing.T) {
