@@ -83,7 +83,7 @@ kubeprep start           # create the cluster if needed; open the current lab
 kubeprep status          # track, current lab, completion
 kubeprep reset           # restore the current lab only
 kubeprep destroy         # delete the kind cluster; keep progress
-kubeprep destroy --all   # cluster and learner progress
+kubeprep destroy all     # cluster and learner progress
 ```
 
 First `start` asks for a track unless you pass `--track=beginner`,
@@ -102,7 +102,7 @@ cluster state.
 | `Alt+←` / `Alt+→` | previous / next scenario page (or `Ctrl+G` then `p`/`n`) |
 | `F10` | leave |
 
-`reset` and `destroy` ask for confirmation. Scripts must pass `--force`.
+`reset` and `destroy` ask for confirmation. Scripts must pass `-y`.
 
 ### Curriculum
 
