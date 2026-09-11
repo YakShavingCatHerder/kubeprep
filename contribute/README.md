@@ -1,5 +1,8 @@
 # Author a lab
 
+Step-by-step (copy the example, fill in `authoring`, then the Scenario body):
+[`docs/contributing.md`](../docs/contributing.md).
+
 Labs are YAML. Learners use a real shell on a dedicated
 [`kind`](https://kind.sigs.k8s.io/) cluster. The runner grades cluster state,
 so any legitimate [`kubectl`](https://kubernetes.io/docs/reference/kubectl/)

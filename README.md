@@ -147,7 +147,7 @@ your real shell, not a sandbox. Details:
 ## Docs
 
 - [`docs/architecture.md`](docs/architecture.md) — packages and pack load
-- [`docs/CONTRIBUTING.md`](docs/CONTRIBUTING.md) — engine and lab workflow
+- [`docs/contributing.md`](docs/contributing.md) — engine and lab workflow
 - [`docs/SECURITY.md`](docs/SECURITY.md) — trust boundaries
 - [`contribute/README.md`](contribute/README.md) — authoring labs
 
