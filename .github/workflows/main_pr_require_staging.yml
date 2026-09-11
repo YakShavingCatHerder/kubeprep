@@ -1,0 +1,40 @@
+name: Main Source Guard
+
+on:
+  pull_request_target:
+    branches:
+      - main
+    types:
+      - opened
+      - reopened
+      - synchronize
+      - edited
+
+permissions:
+  contents: read
+
+jobs:
+  staging-only:
+    name: Require staging source
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify source branch
+        env:
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          THIS_REPO: ${{ github.repository }}
+        run: |
+          if [ "$HEAD_REF" != "staging" ]; then
+            echo "Pull requests into main must come from staging."
+            echo "Received source branch: $HEAD_REF"
+            exit 1
+          fi
+
+          if [ "$HEAD_REPO" != "$THIS_REPO" ]; then
+            echo "Pull requests into main must come from this repository's staging branch."
+            echo "Received source repository: $HEAD_REPO"
+            exit 1
+          fi
+
+          echo "Valid release path: staging -> main"
