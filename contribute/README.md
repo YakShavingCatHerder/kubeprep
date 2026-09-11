@@ -142,4 +142,4 @@ recreates it on reset. Extra broken objects go in
 `startingClusterConfiguration` or in setup/reset YAML next to the lab file.
 
 Do not use host commands, `hostPath`, privileged containers, or cluster-scoped
-kinds such as `ClusterRole`. See [`docs/SECURITY.md`](../docs/SECURITY.md).
+kinds such as `ClusterRole`. See [`docs/security.md`](../docs/security.md).

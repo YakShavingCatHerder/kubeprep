@@ -142,13 +142,13 @@ KubePrep writes its own kubeconfig under your OS user config directory. Before
 it mutates or destroys a cluster it checks API server, CA fingerprint, cluster
 name, and an ownership marker. It never grades shell history. The Lab Shell is
 your real shell, not a sandbox. Details:
-[`docs/SECURITY.md`](docs/SECURITY.md).
+[`docs/security.md`](docs/security.md).
 
 ## Docs
 
 - [`docs/architecture.md`](docs/architecture.md) — packages and pack load
 - [`docs/contributing.md`](docs/contributing.md) — engine and lab workflow
-- [`docs/SECURITY.md`](docs/SECURITY.md) — trust boundaries
+- [`docs/security.md`](docs/security.md) — trust boundaries
 - [`contribute/README.md`](contribute/README.md) — authoring labs
 
 ## License
