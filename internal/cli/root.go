@@ -147,24 +147,12 @@ func (a *app) doctorCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := waitFor(cmd.OutOrStdout(), "Installing kind and kubectl", func() error {
+			if err := waitFor(cmd.OutOrStdout(), "checking pinned kind and kubectl", func() error {
 				return cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions())
 			}); err != nil {
 				return err
 			}
-			failed := false
-			for _, result := range doctor.Check(cmd.Context()) {
-				marker := "ok"
-				if !result.OK {
-					marker = "fail"
-					failed = true
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "[%s] %s: %s\n", marker, result.Name, result.Detail)
-				if result.Remediation != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "       %s\n", result.Remediation)
-				}
-			}
-			if failed {
+			if writeDoctorReport(cmd.OutOrStdout(), doctor.Check(cmd.Context())) {
 				return errors.New("one or more prerequisites are unavailable")
 			}
 			return nil
