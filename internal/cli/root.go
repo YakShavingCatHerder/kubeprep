@@ -147,24 +147,12 @@ func (a *app) doctorCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := waitFor(cmd.OutOrStdout(), "Installing kind and kubectl", func() error {
+			if err := waitFor(cmd.OutOrStdout(), "checking pinned kind and kubectl", func() error {
 				return cluster.EnsureTools(cmd.Context(), doctor.Paths, cluster.DefaultToolOptions())
 			}); err != nil {
 				return err
 			}
-			failed := false
-			for _, result := range doctor.Check(cmd.Context()) {
-				marker := "ok"
-				if !result.OK {
-					marker = "fail"
-					failed = true
-				}
-				fmt.Fprintf(cmd.OutOrStdout(), "[%s] %s: %s\n", marker, result.Name, result.Detail)
-				if result.Remediation != "" {
-					fmt.Fprintf(cmd.OutOrStdout(), "       %s\n", result.Remediation)
-				}
-			}
-			if failed {
+			if writeDoctorReport(cmd.OutOrStdout(), doctor.Check(cmd.Context())) {
 				return errors.New("one or more prerequisites are unavailable")
 			}
 			return nil
@@ -258,7 +246,7 @@ func (a *app) labPublishCommand() *cobra.Command {
 func (a *app) labValidateCommand() *cobra.Command {
 	return &cobra.Command{
 		Use:   "validate [directory]",
-		Short: "Validate labs in a curriculum directory",
+		Short: "Validate labs within curriculum/",
 		Args:  cobra.MaximumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			dir := liveCurriculumDir
@@ -455,7 +443,7 @@ func (a *app) statusCommand() *cobra.Command {
 }
 
 func (a *app) resetCommand() *cobra.Command {
-	var force bool
+	var yes bool
 	command := &cobra.Command{
 		Use:   "reset",
 		Short: "Reset the current lab's progress and starting cluster state",
@@ -473,7 +461,7 @@ func (a *app) resetCommand() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := a.confirm(cmd, force, fmt.Sprintf("Reset %s to its starting state?", scenario.Title)); err != nil {
+			if err := a.confirm(cmd, yes, fmt.Sprintf("Reset %s lab to its starting state?", scenario.Title)); err != nil {
 				return err
 			}
 			manager, err := a.clusterManager()
@@ -491,55 +479,74 @@ func (a *app) resetCommand() *cobra.Command {
 			if err := store.ResetScenarioProgress(scenario.ID); err != nil {
 				return err
 			}
-			fmt.Fprintf(cmd.OutOrStdout(), "%s reset. Run kubeprep start to continue.\n", scenario.Title)
+			fmt.Fprintf(cmd.OutOrStdout(), "%s lab reset. Run kubeprep start to continue.\n", scenario.Title)
 			return nil
 		},
 	}
-	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive reset")
+	command.Flags().BoolVarP(&yes, "yes", "y", false, "skip confirmation")
 	return command
 }
 
 func (a *app) destroyCommand() *cobra.Command {
-	var force bool
-	var all bool
+	var yes bool
+	var allFlag bool
 	command := &cobra.Command{
 		Use:   "destroy",
 		Short: "Destroy the training cluster",
+		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
-			prompt := "Destroy the KubePrep cluster?"
-			if all {
-				prompt = "Destroy the KubePrep cluster and clear all learner progress?"
+			if allFlag {
+				return errors.New("use `kubeprep destroy all` to destroy the cluster and clear learner progress")
 			}
-			if err := a.confirm(cmd, force, prompt); err != nil {
-				return err
-			}
-			manager, err := a.clusterManager()
-			if err != nil {
-				return err
-			}
-			if err := waitFor(cmd.OutOrStdout(), "Destroying training cluster", func() error {
-				return manager.Destroy(cmd.Context())
-			}); err != nil {
-				return err
-			}
-			if all {
-				store, err := game.NewStore()
-				if err != nil {
-					return err
-				}
-				if err := store.ClearLearnerState(); err != nil {
-					return err
-				}
-				fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was cleared.")
-				return nil
-			}
-			fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was retained.")
-			return nil
+			return a.runDestroy(cmd, yes, false)
 		},
 	}
-	command.Flags().BoolVar(&force, "force", false, "confirm a non-interactive destroy")
-	command.Flags().BoolVar(&all, "all", false, "also clear learner progress")
+	command.PersistentFlags().BoolVarP(&yes, "yes", "y", false, "skip confirmation")
+	command.Flags().BoolVar(&allFlag, "all", false, "")
+	_ = command.Flags().MarkHidden("all")
+	command.TraverseChildren = true
+
+	command.AddCommand(&cobra.Command{
+		Use:   "all",
+		Short: "Destroy the training cluster and clear learner progress",
+		Args:  cobra.NoArgs,
+		RunE: func(cmd *cobra.Command, _ []string) error {
+			return a.runDestroy(cmd, yes, true)
+		},
+	})
 	return command
+}
+
+func (a *app) runDestroy(cmd *cobra.Command, yes, clearProgress bool) error {
+	prompt := "Destroy the KubePrep cluster?"
+	if clearProgress {
+		prompt = "Destroy the KubePrep cluster and clear all learner progress?"
+	}
+	if err := a.confirm(cmd, yes, prompt); err != nil {
+		return err
+	}
+	manager, err := a.clusterManager()
+	if err != nil {
+		return err
+	}
+	if err := waitFor(cmd.OutOrStdout(), "Destroying training cluster", func() error {
+		return manager.Destroy(cmd.Context())
+	}); err != nil {
+		return err
+	}
+	if clearProgress {
+		store, err := game.NewStore()
+		if err != nil {
+			return err
+		}
+		if err := store.ClearLearnerState(); err != nil {
+			return err
+		}
+		fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was cleared.")
+		return nil
+	}
+	fmt.Fprintln(cmd.OutOrStdout(), "Cluster destroyed. Learner progress was retained.")
+	return nil
 }
 
 func (a *app) ensureProfile(cmd *cobra.Command, store *game.Store, requestedTrack string) (game.Profile, error) {
@@ -916,12 +923,12 @@ func evaluateScenario(ctx context.Context, scenario *curriculum.Scenario, manage
 	})
 }
 
-func (a *app) confirm(cmd *cobra.Command, force bool, prompt string) error {
-	if force {
+func (a *app) confirm(cmd *cobra.Command, yes bool, prompt string) error {
+	if yes {
 		return nil
 	}
 	if !readerIsTerminal(cmd.InOrStdin()) {
-		return errors.New("destructive non-interactive operation requires --force")
+		return errors.New("destructive non-interactive operation requires -y")
 	}
 	fmt.Fprintf(cmd.OutOrStdout(), "%s [y/N] ", prompt)
 	line, err := bufio.NewReader(cmd.InOrStdin()).ReadString('\n')
